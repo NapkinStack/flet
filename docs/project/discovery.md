@@ -167,6 +167,64 @@ of them was in the test as designed.
 | `0x7c36139b…` | 2,414 USDC | **6,013** | 16,376 |
 | `0xe7795fce…` | 2,753 USDC | **51,367** | 245,792 |
 
+**Corrected the same day: the three traders were unrepresentative, and the correction
+reverses the conclusion.** They were picked by 30-day ROI, which selects scalpers. Screening
+the **whole** leaderboard instead — 13,536 accounts above 5k USDC active over 30 days — the
+median monthly turnover is **8.4×** the account, which costs a copier **1.2% a month** in
+total fees, not 285%. **68.6%** of active accounts stay under a 5%-a-month fee burden, and
+**7,635** of them also closed the month positive. *The fee problem is a selection problem,
+not a structural one.*
+
+**The 10 USDC floor, however, survives the correction — and yields the product's real
+constraint.** Sampling 14 traders from the copyable-and-winning population: the ticket a
+member needs to place 80% of a trader's orders has a **median of 6,583 USDC**; none of the
+14 is reachable with 1,000 USDC and two with 2,000. The rule behind it, measured across the
+sample: **a member needs roughly one twentieth of the trader's account**, the ratio ranging
+from 8 to 80. So the administrator's list must be matched to the members' wallets, not only
+to the members' trust.
+
+**Supply exists at every size**, once the rule is applied — copyable, winning traders whose
+account is at most 20× the member's ticket:
+
+| Member ticket | Trader accounts in range | Copyable **and** winning |
+|---|---|---|
+| 500 € | 5k–10k | 210 |
+| 1,000 € | 5k–20k | 557 |
+| 2,000 € | 5k–40k | 966 |
+| 5,000 € | 5k–100k | 1,666 |
+
+### Round 2 — the revenue forecast, on minimal stated assumptions
+
+Requested by the decider in the absence of the real figures. **Every input below is an
+assumption of the framer, not a measurement**, except the turnover band and the fee cap,
+which are measured above. Revenue = copiers × ticket × monthly turnover × 0.1%.
+
+| Scenario | Members | Trade perps | Adopt | Active copiers | Ticket | Turnover | **Revenue / month** |
+|---|---|---|---|---|---|---|---|
+| Minimal | 150 | 8% | 25% | 3 | 1,000 € | 10× | **30 €** |
+| Base | 400 | 12% | 35% | 17 | 1,500 € | 15× | **378 €** |
+| High | 1,000 | 15% | 40% | 60 | 2,500 € | 25× | **3,750 €** |
+
+**What 2,000 €/month from a single community would require:** 200 simultaneous active
+copiers at 1,000 € and 10× turnover; or 67 at 2,000 € and 15×; or 27 at 3,000 € and 25×.
+
+**Cross-check against the one measured comparable.** pvp.trade — same venue, same
+builder-code rail, 50,000+ monthly users claimed — earned **$14,899** in its last 30 days
+(section 5.3, read from DefiLlama). The high scenario for *one* community is a quarter of
+that. The base scenario is 2.5% of it.
+
+**What the forecast says, plainly.** One community does not pay for a build. The base case
+covers a subscription, not an engineer. The product is therefore either a **multi-community
+play** — which multiplies the regulatory exposure of section 5.3 and needs not one unpaid
+Karim but dozens — or it needs a different take than 0.1% of notional. Worth noting for that
+second branch, from section 2 round 1: the venue's **vault** rail natively supports a **10%
+profit share**, which pays only when the member gains, and is a different promise to make.
+
+None of this is a recommendation. It is the arithmetic the decider asked for, on assumptions
+the decider has not yet replaced with facts.
+
+---
+
 **Honest limits of this run.** Three traders, three days, chosen from the top of a public
 leaderboard — not a sample of the traders an administrator would actually vouch for, and
 selected for recent success. The slippage proxy has one-minute resolution. The fee figures
