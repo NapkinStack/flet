@@ -121,6 +121,74 @@ And a distinction the sources make that the product must not blur: an agent key 
 take** the member's money, but it **can lose** it. Liquidating a leveraged position is not a
 withdrawal. Pre-mortem item 10 survives this finding intact.
 
+### Round 2 — the feasibility shadow run, actually run
+
+Test **5.2 — feasibility** was run on 2026-09-20, read-only, no keys, no orders, no money.
+It is the only one of the four tests that needed nobody else.
+
+**Method, so it can be repeated.** Hyperliquid's public leaderboard
+(`stats-data.hyperliquid.xyz/Mainnet/leaderboard`) was filtered to accounts between 20k and
+400k USDC with more than 2M USDC of 30-day volume and a positive month — the size a
+community trader plausibly has. Three were taken. Their last 2,000 fills came from
+`api.hyperliquid.xyz/info` (`userFills`), cut to the **last 3 days** so the three are
+compared on equal ground. Entry slippage was measured against 1-minute candles
+(`candleSnapshot`): for each fill where the trader **took** liquidity, the adverse move
+between their fill price and the close of the minute containing it — a proxy for a copier
+reacting within the same minute, and no finer than one minute. Fees are **not modelled**:
+they are the `fee` field of the trader's own fills, scaled to the copier's account.
+
+**The slippage is fine. That is not where this breaks.**
+
+| Trader | Fills / day | Median slippage | p90 | Over the proposed 15 bps threshold |
+|---|---|---|---|---|
+| `0x102d1d1a…` | 522 | **+0.0 bps** | +5.8 | 0% |
+| `0x7c36139b…` | 443 | −0.4 bps | +23.1 | 15% |
+| `0xe7795fce…` | 5 | −6.1 bps | −5.4 | 0% |
+
+The threshold the challenger proposed — *median entry slippage above 15 bps* — **is not
+breached by any of the three**. On this criterion the test passes. It measured the wrong
+thing, and that is itself the finding: three other constraints decide feasibility, and none
+of them was in the test as designed.
+
+**What actually breaks it.**
+
+| Finding | Measurement | What it means |
+|---|---|---|
+| **Half to two-thirds of the fills are not copyable at all.** | Liquidity *posted*, not taken: 0%, **54.1%**, **60.0%** of the three traders' fills. | A resting limit order is filled when the market comes to it. A copier reacting *after* that fill cannot reproduce it — the price has already traded there. They take liquidity at a worse price, or post and may never fill. For two of three traders, most of the strategy is structurally out of reach. |
+| **Most orders are too small to place once scaled down.** | Hyperliquid's floor is **10 USDC of notional**, confirmed empirically: **the smallest of 2,912 observed fills is 10.10 USDC, and not one is below 10**. For a 500 USDC member, **38%, 85% and 87%** of the three traders' orders fall under it. | Copying a 316k account with 500 USDC means a scale of 0.0016. Most orders become dust the venue refuses. The product has a **minimum member ticket**, and it is not a few hundred USDC. |
+| **The fees destroy the account before the strategy can help it.** | Copying trader `0x102d…` costs a member **28.5% of their account in 3 days — 285% a month** — whatever their account size, since it scales. Trader `0x7c36…`: 28.8% a month. | That trader turns their account over 72 times a day. A copier turns theirs over 72 times a day too, and pays on every turn. No edge survives this. |
+| **flet's own commission is the larger half of that burden.** | On trader `0x102d…`, over 3 days: platform fees **33.21 USDC**, flet's builder fee **109.18 USDC**. The trader's own realised fee rate is **0.0304%** of notional; the cap flet may take is **0.1%** — **3.3× what the venue itself charges**. | The idea says "a small commission". At the cap it is not small: it is the dominant cost the member pays, and more than three times the exchange's. |
+
+**The minimum member ticket, per trader, to be able to place…**
+
+| Trader | 50% of their orders | 80% | 95% |
+|---|---|---|---|
+| `0x102d1d1a…` | 340 USDC | **4,896** | 42,953 |
+| `0x7c36139b…` | 2,414 USDC | **6,013** | 16,376 |
+| `0xe7795fce…` | 2,753 USDC | **51,367** | 245,792 |
+
+**Honest limits of this run.** Three traders, three days, chosen from the top of a public
+leaderboard — not a sample of the traders an administrator would actually vouch for, and
+selected for recent success. The slippage proxy has one-minute resolution. The fee figures
+are **optimistic**: they scale the *leader's* fee tier onto a small copier, who would sit in
+a worse tier. And proportional copying is assumed; copying at a fixed size, or only
+replicating position changes above a threshold, would dodge the 10 USDC floor — at the cost
+of no longer running the leader's strategy.
+
+**What it changes for the product**, stated as questions the round must now answer rather
+than as conclusions:
+
+1. **Is there a minimum member ticket, and is it above what a community member will risk?**
+   The numbers say the ticket is in the thousands, not the hundreds.
+2. **Must the authorised traders be selected for being copyable** — low frequency, taker
+   fills, large orders — and not only for being trustworthy? That is a new criterion on
+   Karim's list, and it is technical, not social.
+3. **Is 0.1% the right take, when it is 3.3× the venue's own fee?** The cap is a maximum,
+   not a rate. Lowering it eases the member's burden and shrinks a revenue that the
+   counter-evidence already found thin.
+
+---
+
 **The empirical confirmation is blocked, and the structural finding largely replaces it.**
 
 The plan was: register an agent wallet on testnet, attempt `withdraw3` and `usdSend` with it,
