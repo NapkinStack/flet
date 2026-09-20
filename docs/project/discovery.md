@@ -810,3 +810,24 @@ the direct read of what this category currently pays, not a distant analogy.
 **What this does not change:** the minimum member ticket and the trader-selection rule
 (section 2), both of which apply per member and per trader regardless of how many
 communities exist.
+
+### Round 2 — the revenue model is settled, 2026-09-21
+
+**No profit share.** The decider rules it out. flet is paid a flat commission on the notional
+it routes, capped by the venue at 0.1%, and never takes a share of a member's gains.
+
+This closes the third question the feasibility run put to the decider, and it closes more
+than a pricing choice: the only native way to take a profit share on this venue is the
+**vault** rail, which pools members' capital. Ruling out the profit share therefore also
+rules out vaults and settles the architecture — the member keeps their funds, flet holds a
+revocable agent key, and the venue pays flet on routed volume. Every mention of the vault
+rail in sections 2 and 5 is now background, not an option.
+
+Recorded as **PDR-0001**, with its prior art, the trade-off owned — a member who loses still
+pays — its acceptance criteria, a success criterion dated 2027-03-21 and a removal condition
+that points at question 8 of the legal scoping request.
+
+**Consequence the decider should hold in view:** the revenue model is now fixed *and* capped
+by somebody else. flet cannot raise its take; it can only lower it. Everything therefore
+rests on the number of **active** communities, which is the untested long-tail assumption
+recorded above.

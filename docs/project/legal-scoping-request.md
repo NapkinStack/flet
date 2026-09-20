@@ -16,7 +16,7 @@
 
 Nous demandons une **opinion écrite de cadrage** sur la licéité, en droit français et
 européen, du service décrit ci-dessous, **avant tout développement**. Nous ne demandons ni
-montage, ni rédaction contractuelle : seulement une réponse aux sept questions de la
+montage, ni rédaction contractuelle : seulement une réponse aux huit questions de la
 section 4.
 
 ## 1. Les faits
@@ -124,15 +124,20 @@ tiers que nous n'avons pas mandatés ?**
 
 **Q7 — Les aménagements.** Existe-t-il une construction praticable à l'échelle d'une
 plateforme ouverte : restriction géographique à l'installation, changement de statut,
-adossement à un établissement agréé, ou changement de modèle économique — la plateforme
-d'exécution propose nativement un mécanisme de **partage des gains** (10 % des profits) au
-lieu d'une commission sur le notionnel, si cela change quelque chose à la qualification. Si
-vous en voyez une, un ordre de grandeur de coût et de délai nous est très utile.
+adossement à un établissement agréé ? Si vous en voyez une, un ordre de grandeur de coût et
+de délai nous est très utile.
+
+**Q8 — Le mode de rémunération, en tant que tel.** Nous prélevons une commission sur le
+**volume routé**, jamais sur les gains du membre. C'est une décision arrêtée et nous
+n'envisageons pas de partage des gains : la question n'est donc pas de choisir, mais de
+savoir si **ce mode de rémunération contribue lui-même à la qualification**. Être payé à
+l'acte de routage plutôt qu'à la performance change-t-il quelque chose au statut, dans un
+sens ou dans l'autre ?
 
 ## 5. Ce que nous ne demandons pas
 
 Pour tenir le périmètre et le budget : ni rédaction de conditions générales, ni montage de
-structure, ni fiscalité, ni analyse pays par pays de l'Union. Une opinion écrite sur les sept
+structure, ni fiscalité, ni analyse pays par pays de l'Union. Une opinion écrite sur les huit
 questions suffit à cette étape.
 
 ## 6. Ce que votre réponse décide
