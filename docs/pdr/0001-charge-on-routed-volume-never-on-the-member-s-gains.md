@@ -166,7 +166,7 @@ service at any reachable number of communities.
 > fee on routed volume is itself what makes the operator a regulated provider, where another
 > model would not**.
 
-The second condition is live, not hypothetical: it is question 7 of
+The second condition is live, not hypothetical: it is question 8 of
 `docs/project/legal-scoping-request.md`.
 
 ---
