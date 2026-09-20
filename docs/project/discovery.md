@@ -2,7 +2,7 @@
 decision: clarify           # proposed | go | clarify | kill — the decider decides
 decider: "@napkinstack-admin"  # the human who decides, recorded at intake
 decided_on: 2026-09-20      # YYYY-MM-DD, with the decision
-challenger: "agent session (challenger), 2026-09-20"  # stage 5
+challenger: "agent session (challenger), 2026-09-20; independent agent session (challenger), 2026-09-21"  # stage 5, one per round
 idea: "docs/project/inputs/idea.md"         # the idea as given, kept in docs/project/inputs/
 round: 2
 ---
@@ -657,6 +657,489 @@ that, and the nearest comparable with 50k+ claimed monthly users made $14,899 la
 can refute the project before a line of code is written. Run the legal scoping (viability B)
 and the link test (value) first, and in that order, since the link test performs the act the
 legal test sizes.
+
+### Round 2 challenge — 2026-09-21
+
+**Challenger:** independent agent session, dispatched as challenger · 2026-09-21. This
+session did not write any of the round-2 material and had no access to the session that did.
+
+> **Scope.** Round 1's challenge above is not revisited. This subsection challenges only what
+> round 2 produced: the feasibility shadow run and its correction, the minimum-ticket rule,
+> the revenue forecast, the round-2 entries at the end of the document, `docs/pdr/0001-…`, and
+> `docs/project/legal-scoping-request.md` version 2.
+>
+> **Line references resolve against commit `56189f5`**, the revision this session read.
+> Inserting this subsection shifts every line of the round-2 entries that follow it; resolve a
+> citation against that commit, not against the current file. Nothing above is edited.
+>
+> **Tools.** `docs/tooling-profile.md` still declares no research tool, so this round used the
+> tools at hand, named at each finding: the agent's web search and page fetch, and — for the
+> numbers — direct HTTP reads of `stats-data.hyperliquid.xyz`, `api.hyperliquid.xyz` and
+> `api.llama.fi` from this sandbox, all read-only, no keys, no orders, no money.
+>
+> **Marking**, as in section 2: *primary* — read on the source's own site or endpoint;
+> *reported* — a figure a party states about itself; *excerpt* — seen only in a search result;
+> *primary-negative* — the source is silent where a statement was looked for; *assumption* —
+> unsourced; *derived* — arithmetic done here from sourced figures.
+
+#### R2.0 What was re-measured first, and what held
+
+A challenger who only argues is cheap. Round 2's central measurements were re-run here from
+the same public endpoints before anything below was written.
+
+| Round 2 claim | Re-measured 2026-09-21 | Verdict |
+|---|---|---|
+| "13,536 accounts above 5k USDC active over 30 days" (line 172) | 13,524, from a fresh leaderboard snapshot of 46,312 rows (`accountValue > 5000`, 30-day volume > 0) | **holds** |
+| "median monthly turnover is **8.4×**" (line 173) | 8.5× | **holds** |
+| "**68.6%** … stay under a 5%-a-month fee burden" (line 174) | 68.5%, using 0.1% builder + 0.045% venue taker per turn | **holds** |
+| "**7,635** of them also closed the month positive" (line 175) | 7,589 | **holds** |
+| The supply table, 210 / 557 / 966 / 1,666 (lines 189-192) | 214 / 559 / 971 / 1,674 | **holds** |
+| Maker share of fills: 0% / 54.1% / 60.0% (line 156) | 0% / 50.6% / 67.2%, from 2,000 `userFills` each | **holds** |
+| Minimum ticket for 80% of orders (lines 178-184) | 4,534 / 6,308 / 36,019 USDC against the document's 4,896 / 6,013 / 51,367 | **holds for two of three**; the third differs because this session's 2,000 fills span 15 days where the run cut to 3 |
+| pvp.trade: $180 / $1,412 / $14,899 / $502,489 / $8,005,840 (5.3) | identical, re-read today. DefiLlama's own `methodology` field reads "builder code revenue from Hyperliquid Perps Trades" — the same rail and the same fee flet would use | **holds**, and is a closer comparable than 5.3 claimed |
+
+*primary* — `stats-data.hyperliquid.xyz/Mainnet/leaderboard`, `api.hyperliquid.xyz/info`
+(`userFills`) and `api.llama.fi/summary/fees/pvp.trade`, all read directly from this sandbox
+on 2026-09-21.
+
+One correction to round 1's framing while the data is open: pvp.trade's revenue is no longer
+collapsing, it has bottomed. The 30 days before the ones 5.3 recorded came to **$14,366**
+against $14,899 — flat month on month, at about a third of its trailing-year monthly average
+($41,874). *derived*, from the same series.
+
+**So the arithmetic of round 2's correction is sound.** What follows is not a dispute about
+whether those sums were done right. It is that the one number the revenue depends on was
+taken from the wrong population, and that everything built on top of it inherits the error.
+
+#### R2.1 Pre-mortem — the platform, one year on
+
+It is September 2027. flet shipped as a self-serve bot on any Discord server or Telegram
+channel, paid on routed volume. It is being wound down.
+
+1. **It never got past a hundred servers.** The app was never verified by Discord — an
+   unverified app cannot join a 101st server — and the model needed hundreds. Nobody had
+   checked whether an app that routes leveraged derivatives orders gets verified. *(viability)*
+2. **It got the installs and not the copiers.** Three hundred servers installed it in the
+   launch month. The median server produced zero active copiers, which is precisely what the
+   median builder-code interface on this venue produces in revenue. The long tail of line 776
+   was not a risk to the model; it was the model. *(value)*
+3. **The commission was real and trivial.** Eleven communities went active. At the turnover
+   the trader-selection rule actually yields, the whole year's commission was under €2,000,
+   and the rate could not be raised because somebody else sets the cap. *(viability)*
+4. **The minimum ticket priced out the members.** The members who wanted to copy had €300.
+   The traders their administrators vouched for needed €6,000 behind them. The ones who
+   copied anyway received a third of the leader's orders. *(value)*
+5. **The copy was flet's strategy, not the trader's.** Half the leader's fills were posted,
+   not taken; most of the rest were dust once scaled. flet chose which orders to reproduce,
+   at what size, under what leverage cap. The tracking error *was* the product, and the
+   traders publicly disowned the results their names were attached to. *(feasibility → value)*
+6. **A key store leaked — or was rumoured to have leaked.** flet held one agent key per
+   member across every server. No withdrawal was possible and none was needed: maximum
+   leverage on thin perps zeroed several hundred accounts inside one block. The leverage
+   ceiling was in the same cycle as the incident. *(feasibility / viability)*
+7. **The copying stopped by itself and nobody noticed.** Members registered an agent wallet
+   with another Hyperliquid tool, which deregistered flet's unnamed one — the document quotes
+   exactly this mechanism at line 97 — or an expiry lapsed. The day-60 retention number was a
+   bug report read as a signal. *(usability / feasibility)*
+8. **An administrator listed themselves and drained their own members.** A server built to
+   farm the product; a curated list that was a scam by design. flet took 0.1% of it and
+   appeared in the complaint as the party that routed the orders and was paid for them.
+   Round 2 named this surface at line 801 and addressed none of it. *(viability)*
+9. **The administrators stopped, and the platform had nothing to offer them.** PDR-0001
+   forbids paying them. With one friend that was a risk. With four hundred strangers doing the
+   only work that differentiates the product, it was the growth model. *(value / viability)*
+10. **The written opinion came back favourable on Q1 and reserved on Q4.** Q1 had been asked
+    on facts that changed before the answer arrived; Q4 said an open platform must know where
+    its members are, and the remedy was geoblocking and identity checks the product had no way
+    to perform, at a cost nobody had a budget to compare against. *(viability)*
+11. **An administrator's launch post was the offence, not the operator's service.** The
+    volunteer had never been told. They removed the bot and told the other admins. *(viability)*
+12. **A warning-list entry ended distribution in a day.** Not a fine — a line on a regulator's
+    page, and a delisting the same week. *(viability)*
+13. **Telegram never shipped.** The main-wallet signature needed a browser hop that the Mini
+    App rules made awkward, and half the forecast's communities were Telegram. *(feasibility)*
+
+#### R2.2 The four risks, restated for the platform
+
+Thresholds are **proposed by the challenger**. They are the decider's to set, and the decider
+has now been asked to set thresholds twice without doing so (line 746).
+
+| Risk | The riskiest assumption as round 2 leaves it | The cheapest test that could refute it |
+|---|---|---|
+| **Value** | No longer only "a member copies because a trusted admin vouched". It is now: **enough servers, installed self-serve by strangers, contain enough members holding roughly €5,000 who will route it through a bot belonging to someone they have never heard of.** Line 776-780 calls the install→active ratio "the load-bearing and untested assumption", says "nothing here estimates that ratio", and then estimates nothing. | **The install test. One landing page, no bot, 21 days.** Publish the product where server administrators gather, with an "install" button that instead collects: the server, its member count, and the admin's own estimate of how many members trade perps and with how much. Count admin sign-ups, and count how many describe a server that could actually produce copiers. **Refuted if** administrators do not come, or their servers are too small. *Proposed threshold: fewer than 20 admin sign-ups in 21 days, or fewer than 4 of those describing a server with 10 or more members trading perps at €2,000 or above.* This test also produces the operand the forecast has been missing since round 1. Run it **alongside** the link test of 5.2, which stands as written — and which now needs the second reading 5.3's last row asked for: **record the copiers' P&L next to their retention**, or a bad retention number will be read as a refutation of the wrong hypothesis. |
+| **Usability** | That a member of *any* server, with no relationship to the operator, completes a flow requiring a main-wallet `ApproveBuilderFee` signature (*primary*, and flet cannot produce it — round 1's F3 is unresolved), a separate `ApproveAgent` registration, and, on Telegram, either a Mini App inside TON Connect rules or a hop out to a browser. Round 1's threshold was set for members of a community that trusts its administrator; the platform removes the trust and adds a channel. | **The same walkthrough, twice, with strangers, one week, no backend.** Five members of a server the operator has no relationship with, on Discord; five on Telegram. Thirty minutes each, unaided, testnet, screen shared. Record completion, time, and the step they stop at. **Refuted if** they cannot get through it. *Proposed threshold: on either channel, 3 or more of 5 fail to complete unaided in under 10 minutes; or, on Telegram, 2 or more of 5 leave the app to sign and do not come back.* Refuted on Telegram alone halves the forecast's community count. **And before the test, write down what the product does when an agent registration silently lapses** (line 97). If the answer is "the member finds out from their P&L", the usability risk is not onboarding — it is silent failure. |
+| **Feasibility** | Two assumptions, neither tested. First, that "replication" is a thing flet can do at all — section 2 establishes that most of a typical leader's fills are not reproducible and most scaled orders are refused, and then the product is still described to a lawyer as replication. Second, that **one agent key per member, across an open set of servers, held by one unauthorised natural person**, is an operable design. | **(A) Tracking error, two weeks, read-only, no keys.** Take the ticket-matched supply of lines 186-192 — copyable, winning traders at most 20× a €2,000 ticket — and simulate the copy flet will actually implement: skip sub-floor orders, take liquidity where the leader posted, apply the leverage ceiling of line 725. Report the copier's monthly return against the leader's, per trader. **Refuted if** the copy does not reproduce the leader. *Proposed threshold: median absolute tracking error above 25% of the leader's monthly return, or more than 1 in 10 simulated copiers finishing a month negative that the leader finished positive.* This is what test 5.2 was for; the slippage proxy measured the wrong thing and section 2 says so at line 154. **(B) Blast radius, one afternoon, on paper.** Write the incident: every agent key flet holds is disclosed at 02:00. Enumerate what the holder can do, how long before every member can revoke, and what flet can do centrally without the member. **Refuted if** no answer bounds the loss. *Proposed threshold: if flet cannot bring every member to zero exposure within 60 minutes without the member acting, the design is not shippable at platform scale.* Still open, and now three sessions old: whether an agent may register another agent, and whether `usdClassTransfer` / `subAccountTransfer` accept an agent signature. The docs remain silent — *primary-negative*, re-confirmed today. |
+| **Viability** | That a rate fixed at 0.1% (PDR-0001) pays for a service an unauthorised natural person provides to members in jurisdictions it does not know — in a category whose median participant on this exact rail earns **$1,689 a month** and where both named comparables charge **half** the rate flet intends. | **(A) Economics, half a day, no code — the same multiplication as round 1, with the right multiplicand.** Re-run the forecast on the turnover of the population the document's own selection rule produces (measured below: 5.4× a month for a €1,500 ticket), not on 15×, and at 0.05% as well as 0.1%. **Refuted if** the honest optimistic case cannot pay for the build. *Proposed threshold: if clearing €2,000/month needs more than 20 active communities at the rate the decider intends to charge, that is a kill and not a clarify.* On the restatement below it needs **15** at 0.1% and **30** at 0.05%. **(B) The written opinion — unchanged, and not yet ready to send.** Before it goes: correct the facts (R2-F15), add the third party it promises and omits (R2-F16), state the budget and the deadline the threshold is defined against (R2-F17), and record the lawyer's field (R2-F18). *Threshold unchanged and now completed: any "authorisation required" for the operator **or** for the administrators whose remedy costs more than €X or takes longer than date Y is a kill. The decider writes X and Y before the letter is sent* — otherwise the opinion cannot be read against its own threshold, which is the only reason it is being bought. **(C) The platform gate, one week, free.** Apply for Discord app verification describing what the app actually does, and read Telegram's Mini App rules against the intended onboarding. **Refuted if** the distribution channel will not carry the product. *Proposed threshold: verification refused, or not granted within 30 days, on either channel.* This costs nothing and sits upstream of every number in the forecast. |
+
+#### R2.3 Counter-evidence
+
+Researched this session with the tools named above. An explicit "not found" is recorded as a
+result.
+
+| Finding | What it contradicts | Mark / source |
+|---|---|---|
+| **The long tail is measurable, it is on this exact rail, and it is bleak.** DefiLlama's fee overview for chain "Hyperliquid L1" lists **116 protocols in the `Interface` category** — the builder-code frontends, methodology "builder code revenue from Hyperliquid Perps Trades". Trailing 30 days: category total **$15,050,782**, of which the **top 5 take 79%** and the top 10 take 89%. **Median: $1,689.** 45% earn under $1,000 a month; 34% under $100; **18 (16%) earned exactly $0**. Of those 18, ten had trailing-year revenue above $1,000 — **Dreamcash Markets** ($1,701,446 over the year → $0 last month), **Felix Perps** ($813,636 → $0), **Ventuals** ($255,991 → $0), **HyperSignals** ($203,505 → $0), **VibeLiquid Perps** ($182,324 → $0), **SuperX** ($141,345 → $0), **Ranger Finance Perps**, **HyperSwap Terminal**, **FlowBot Perps**, **Superstack**. Of the 80 protocols with over $10,000 of trailing-year revenue, **48 now run below one twelfth of it**. | Line 776-780: "**The load-bearing and untested assumption is the long tail** … Nothing here estimates that ratio, and it decides everything." A close proxy is one API call away and the call was not made. It also answers round 1's explicit not-found ("the 'failed competitor' evidence the playbook asks for does not exist in readable form"): on this rail, in this category, **the modal outcome of shipping is zero**, and products that earned six figures in a year are at zero this month. Note the honest counterweight: the category *aggregate* is up 31% on its trailing-year monthly average — but that growth sits in wallets (tradeXYZ, MetaMask, Trust Wallet, Phantom), not in copy-trading products. And line 769's base case of 382 € (≈$410) would place an entire active community at roughly the **40th percentile** of this category. | *primary* — `api.llama.fi/overview/fees/Hyperliquid%20L1`, read directly 2026-09-21. DefiLlama is an aggregator, not the companies; a protocol at $0 may have moved off builder codes rather than shut down. |
+| **Both named comparables charge 0.05%, not the cap.** pvp.trade's fee is reported at **0.05% on futures**. Copin was already recorded at 0.05% in 5.3. | PDR-0001 fixes the model at "at most 0.1%" and argues it is cheap because Telegram bots charge 1% (PDR lines 61-63). The relevant convention is not Telegram bots; it is the builder-code frontends on this venue, and they charge half. Every revenue figure in the document assumes the cap. | pvp.trade fee — *excerpt*, third-party guides, not pvp.trade's own site. Copin — *excerpt*, as in 5.3. |
+| **The nearest comparable routes about $596 of notional per claimed monthly user.** $14,899 at 0.05% implies ≈$29.8M of notional over 30 days; against pvp.trade's claimed 50,000+ monthly users that is ≈$596 per user per month. | The forecast's base case assumes **22,500 € of notional per copier per month** (1,500 € × 15×) — about **38×** the comparable, or about 14× at the restated 5.4× turnover. Copiers are not counter-traders and the comparison is not like for like, but the order of magnitude is a reality check the document never performs. | *derived*, from two *excerpt*-grade figures ($14,899 is *primary*; the 0.05% rate and the 50k user count are not). Directional, not a figure. |
+| **Telegram has a specific clause pointing at flet's Telegram onboarding.** Telegram's Bot Developer Terms, section 7: "all **Mini Apps** which implement cryptocurrency functionality … are required to be based exclusively on [TON]"; 7.2 requires Mini Apps with wallet functionality to use "only … TON Connect SDK"; 7.4 prohibits promoting non-TON cryptoassets; 7.3 carves out multichain wallets "provided that such actions are performed directly within the interface of the Mini App". Also, for the operator: "It is your responsibility to ensure that any TPA … operate within all applicable laws", with a full indemnity to Telegram. | Line 792-795: "the Discord Developer Policy question of section 5.3 now has a **Telegram twin that nobody has looked at**." Somebody has now, and there is a named clause. Hyperliquid is not TON and flet's onboarding needs an EVM main-wallet signature; whether 7.3 covers it is unresolved. The counterweight is real: pvp.trade operates on Telegram against Hyperliquid, so this is not an absolute bar — it may simply mean flet must be a bot and not a Mini App, which pushes the signature back into a browser and makes the usability risk worse, not better. | *primary* — `telegram.org/tos/bot-developers`, read via page fetch. The fetch returns quoted fragments with section numbers; the full surrounding text was **not** read. Confirm on the page before relying on 7.3. |
+| **An unverified Discord app cannot exceed 100 servers.** "A bot that is currently in under 100 servers cannot join a 101st without getting verified." | The multi-community economics need hundreds of installations — 390 on the document's own 10% activation figure (line 780), about 1,090 on the restatement below. The first ceiling is not demand; it is a platform review flet has not been through, for an app that routes leveraged derivatives orders, and nothing establishes that such an app is verified. This belongs above the revenue table, not in a footnote. | *excerpt* — search results only. Discord's own pages defeated this session as they defeated round 1: `docs.discord.com/developers/tutorials/…/app-verification-and-approval` returned **404**, `support-dev.discord.com` Developer Policy returned **403**. **Must be read on the primary source before any go.** |
+| **IOSCO's final report exists, is dated, and is about exactly this intersection.** IOSCO **FR/06/2025**, *Online Imitative Trading Practices: Copy Trading, Mirror Trading and Social Trading*, published **19 May 2025**, alongside a separate final report on finfluencers. It flags a "growing overlap between imitative trading and finfluencer activity", which "can obscure the distinction between regulated advice and general information". | 5.3 carried IOSCO as a bare *excerpt*. The reference and date now verify, and the content points at **the selector**, not the operator — a second international body after ESMA aiming at the person who picks the traders. That strengthens F5 rather than dissolving it, and it lands on an administrator nobody has told. | *reported* — A&O Shearman's FinReg summary, read directly. **IOSCO's own PDF returned 403 to this session and was not read.** |
+| **Hyperliquid's terms are still unreadable — a third session, a third failure.** `app.hyperliquid.xyz/terms` fetched today returns 6,845 bytes containing 581 characters of text, all of it a build-tooling comment. No terms. | Round 2 makes the Restricted Persons clause something **flet must enforce** (line 787) and the legal request asks a paid question about it (Q5). The project is buying an opinion on a document that no session has read. | *primary-negative* and an explicit **not verified**. An *excerpt* seen today claims the licence is "for your own, or your internal use only"; unverified, and nothing here relies on it. |
+
+**Explicitly not found:**
+
+- **No public figure for the install→active rate of a self-serve Discord or Telegram bot** —
+  not from Discord, not from a bot directory, not from a developer write-up. The category
+  distribution above is the nearest proxy and it is a proxy, not the ratio. *Not found.*
+- **Nothing, still, on an administrator-curated list restricted to one community.** Third
+  independent search across three sessions. The claimed novelty remains unverified.
+  *Assumption.*
+- **No enforcement action against a copy-trading operator specifically** was found for
+  2024-2026, as in round 1. Absence of enforcement is not absence of exposure.
+
+#### R2.4 Flaws in the round-2 material
+
+**R2-F1 — Line 198-199 calls the forecast's turnover a measurement. It is not, and the only
+measurement in the document points the other way. This is the flaw that moves the most money.**
+
+The forecast states: "Every input below is an assumption of the framer, not a measurement,
+except **the turnover band** and the fee cap, **which are measured above**." The turnover band
+— 10× / 15× / 25× — is measured nowhere. The only turnover measured above is the **8.4×**
+median of line 173, which sits *below* the entire band.
+
+And 8.4× is the median of **all** active accounts, including the scalpers the same paragraph
+excludes as uncopyable. Apply the document's own selection rule from line 174-175 — positive
+month, fee burden under 5% — to a fresh snapshot of the same leaderboard, and the median
+monthly turnover of the surviving population is **2.06×** (n = 7,589). Apply the
+ticket-matching rule of line 186-192 as well, and the medians for the three scenarios' tickets
+are **5.10× / 5.40× / 5.60×**.
+
+Restated on the ticket-matched median — every other input left exactly as the framer wrote it:
+
+| Scenario | Ticket | Doc's turnover | Doc's revenue | Measured median turnover | Restated | Overstated |
+|---|---|---|---|---|---|---|
+| Minimal | 1,000 € | 10× | 30 € | 5.10× | **15 €** | 2.0× |
+| Base | 1,500 € | 15× | 378 € | 5.40× | **136 €** | 2.8× |
+| High | 2,500 € | 25× | 3,750 € | 5.60× | **840 €** | 4.5× |
+
+Which carries straight into the multi-community table at lines 766-774:
+
+- 2,000 €/month needs about **15** active base-case communities, not 5.
+- Matching pvp.trade's last month needs about **109**, not 39.
+- At the 10% activation rate the document itself posits (line 780), that is about **1,090
+  installations** — above Discord's unverified ceiling by an order of magnitude.
+
+*derived*, from a leaderboard snapshot read 2026-09-21 and the document's own assumptions.
+
+**And the structural point the document never states: revenue and the member's fee burden are
+the same variable.** Revenue = ticket × turnover × 0.1%. Burden = turnover × ≈0.145%. Every
+euro flet earns costs the member €1.45. The correction at line 175 fixes the member's problem
+by selecting *away* from flet's revenue. Lines 174-175 and lines 204-206 optimise the same
+number in opposite directions, in the same section, and neither mentions the other. At the
+base case's own 15×, flet takes **18% of every member's capital per year**; at the high case's
+25×, **30% a year**. Against a copy-trading base rate that 5.3's own last row calls poor, that
+is the number the value test has to beat.
+
+**R2-F2 — The two forecast tables disagree, and the "5 communities" claim is arithmetically
+false.**
+
+Line 205 gives the base case as **378 €**. Line 769's table gives one community at **382 €**
+and five at 1,912 € — that is 5 × 382.5. The difference is that the first table rounds the
+copier count up to 17 and computes the revenue on 16.8. Pick one.
+
+Line 773: "To reach 2,000 €/month: **5 communities in the base case**." 5 × 382.5 = 1,912.50.
+It is six, on the document's own figures.
+
+Line 774: "the **$14,899** that pvp.trade earned last month: 39 base-case communities."
+39 × 382.5 = 14,917.5 **euros** compared against a **dollar** figure, with no rate stated
+anywhere. The builder fee is credited in USDC and every ticket in the model is in euros; the
+document silently treats them as the same unit throughout, including in the supply table at
+lines 189-192, which pairs "500 €" tickets with "5k–10k" USDC accounts.
+
+**R2-F3 — The 285%/month headline is a three-day window multiplied by ten, and the same
+endpoint serves the number that would have caught it.**
+
+Line 159: "Copying trader `0x102d…` costs a member **28.5% of their account in 3 days — 285% a
+month**", and "That trader turns their account over **72 times a day**."
+
+Resolved on today's leaderboard, that account is
+`0x102d1d1a6240581a809bac9b9b4dff2eafe8c058`: account value 272,805 USDC, 30-day volume
+196,252,428 USDC — **719× a month, or 24× a day**, with the most recent 24 hours at 8.9×. Same
+fee arithmetic on the trader's own 30-day figure gives roughly **104% a month**, not 285%.
+
+The finding survives — this trader is uncopyable by a wide margin — but the number does not,
+and the number is what carried the section. The `windowPerformances` field on the very
+endpoint the run used returns the 30-day figure next to the account value; the run took a
+three-day slice of the same trader and multiplied by ten without looking at it. *primary*,
+re-measured today.
+
+**R2-F4 — The shadow run says it can be repeated and then withholds what repeating it needs.**
+
+Line 126: "**Method, so it can be repeated.**" The three addresses are truncated to eight hex
+characters (lines 148-152). This session resolved all three against today's leaderboard, but
+that is luck: an account that drops off the leaderboard is unrecoverable from eight
+characters. Record the full addresses and the snapshot timestamp, or the section's central
+measurements are unauditable by anyone including its author.
+
+**R2-F5 — "Not one is below 10" is false, and the run measures fills where it reasons about
+orders.**
+
+Line 158: "confirmed empirically: **the smallest of 2,912 observed fills is 10.10 USDC, and
+not one is below 10**." In 2,000 fills of `0x7c36139b…` read today there is one of **4.23
+USDC** (NEAR, "Open Long", crossed). One in six thousand — so the floor is real and the
+conclusion stands. But the floor is on the **order**, not the fill: Hyperliquid's own error
+text carries an exception for reduce-only closes, and partial fills of a compliant order
+produce sub-floor fills. The observed fill distribution is therefore smaller than the order
+distribution it is used as a proxy for, which biases the minimum-ticket figures of lines
+178-184 **upward** by an unmeasured amount. The "roughly one twentieth of the trader's
+account" rule of line 182 is directional, not a measurement, and the document presents it as
+"the product's real constraint". *primary*, re-measured today.
+
+**R2-F6 — The supply table applies a median as if it were a guarantee.**
+
+Lines 186-192 count "copyable **and** winning traders whose account is **at most 20×** the
+member's ticket". Line 182-183 says that 20× is the median of a ratio "ranging from 8 to 80",
+on a sample of **14**. By construction, roughly half the traders counted inside the band still
+need a bigger ticket than the member has. The counts reproduce (214 / 559 / 971 / 1,674 today
+against 210 / 557 / 966 / 1,666); what they count does not mean what the heading says.
+"Supply exists at every size" is, at best, half of it, from a rule fitted on fourteen points
+with a tenfold spread.
+
+**R2-F7 — The screen is survivorship-filtered, and "7,635 closed the month positive" is largely
+the filter.**
+
+Line 174-175. On today's snapshot, **75.2%** of the screened population closed the month
+positive — an implausible base rate for leveraged perps, and a sign that the filter is doing
+the work. Among the active accounts the screen discards, those at or below 5,000 USDC,
+**62.2%** closed the month negative, against 24.1% of those kept. The 5k threshold is applied
+to the account value *after* the month, so losing accounts fall out of the sample. This does
+not overturn the correction; it means the positive-supply figure cannot be read as a base rate,
+and the administrator picks for *next* month, which one snapshot cannot measure. Two snapshots
+thirty days apart can, and would cost an hour.
+
+**R2-F8 — "The economics become plausible for the first time" (line 766) is the strongest
+claim in round 2 and the least supported.**
+
+It multiplies a per-community figure that is 2.8× too high (R2-F1) by a count of active
+communities that the same entry says nothing estimates (lines 776-780), and nets off no cost
+of serving them. Multiplying an untested number by an unknown number does not make economics
+plausible; it makes them unfalsifiable. The honest sentence is the one three paragraphs later
+— "it decides everything" — and it should lead, not follow.
+
+**R2-F9 — Line 808 understates what the platform changes.**
+
+"**What this does not change:** the minimum member ticket and the trader-selection rule …
+apply per member and per trader regardless of how many communities exist." True, and that is
+the problem. The trader-selection rule is technical, measured in this document, and must now
+be applied either by hundreds of volunteer administrators who have never seen it, or by flet.
+If flet applies it, the legal request's central factual claim becomes false — see R2-F15.
+
+**R2-F10 — PDR-0001's success criterion is not the conservative half of the base case. It is
+2.2× harder per member.**
+
+PDR lines 144-150: "at least **20 members**, across at least 5 communities … and the
+commission collected over that month exceeds **1,000 €**", justified as "deliberately below
+the forecast: `discovery.md` puts five base-case communities at about 1,900 € a month, so
+1,000 € is the conservative half".
+
+Five base-case communities is **85 copiers**, not 20. The criterion halves the money and cuts
+the members by 76%, which means **50 € of commission per member per month** against the base
+case's **22.5 €** — 2.2× the revenue per member of the scenario it calls itself a discount of.
+In notional that is 50,000 € routed per member per month: at the base case's own 15× turnover,
+a **3,333 €** ticket each; at the ticket-matched median measured here, **9,259 €**; at the
+selected-population median, **24,272 €**. A criterion that quietly requires every one of
+twenty members to sit at or above the top of the measured ticket range is not conservative.
+(Minor, same criterion: "1,000 €" against a fee the venue credits in USDC.)
+
+**R2-F11 — PDR-0001's removal condition cites the wrong question.**
+
+PDR lines 169-170: "it is **question 7** of `docs/project/legal-scoping-request.md`". Q7 is
+*Les aménagements*. The remuneration question is **Q8** (legal request lines 130-135), as
+line 831 of the discovery itself says: "a removal condition that points at **question 8**".
+The live removal condition of an Accepted PDR points at the wrong paragraph of the document it
+depends on.
+
+**R2-F12 — PDR-0001 treats two distinct venue approvals as one, and one of the two cases is a
+safety case.**
+
+PDR line 107: "**The member revokes the approval** — copying stops; no charge survives the
+revocation." The venue has two separate approvals, both recorded in this document:
+`ApproveAgent`, which lets flet trade, and `ApproveBuilderFee`, which lets flet be paid
+(*primary*, builder-codes docs; the latter signed by the main wallet, section 2 line 56).
+
+- Revoke the builder fee and leave the agent: **flet keeps trading a member's leveraged
+  account, for nothing, and no rule anywhere says it must stop.**
+- Revoke the agent and leave the builder approval: it keeps occupying one of the member's
+  ten (*primary*, builder-codes docs).
+
+Neither is in the edge-case list. Nor is the case the venue's own design makes inevitable: the
+member signs a **maximum** builder fee, so a member whose signed maximum is below the
+configured rate is a state the product will meet, and PDR line 115 — "One rate, the same for
+every member and every community" — is not enforceable against a per-user signed maximum.
+
+**R2-F13 — Acceptance criterion 3 has no oracle, and the criteria omit the constraint the
+discovery measured.**
+
+PDR lines 131-132: "Given a member who lost money over a month, **when they ask what they owe
+flet**, then the answer is nothing". "When they ask" is not an observable event; there is
+nothing to assert against. The kernel's Law 2 requires the criterion to be executable before
+any code. Rewrite it as a system assertion — no balance record exists, no invoice object can
+be constructed — or drop it.
+
+And nothing in the criteria addresses the **minimum member ticket**, which section 2 calls the
+product's real constraint, nor what a member is shown or charged when their scaled order is
+refused under the 10 USDC floor. PDR line 110 has an edge case for the ten-approval limit and
+none for the one the discovery actually measured.
+
+**R2-F14 — PDR-0001 makes the unpaid administrator structural, and never considers the obvious
+alternative.**
+
+PDR line 31, Out of scope: "**Any charge to the administrator**, and any listing fee paid by a
+trader to appear on a list." Fine as far as it goes — but the options table at PDR lines 74-81
+contains **no option for sharing the commission with the administrator**, which is the single
+lever that answers pre-mortem item 4, and which the idea file asks for in as many words:
+"permettant à une communauté de proposer du copy trading à ses membres et de **monétiser
+l'activité générée**" (`inputs/idea.md`). With one friendly volunteer, unpaid curation is a
+risk. With an open set of strangers "que nous ne choisissons pas et ne contrôlons pas", unpaid
+curation *is* the growth model, and it contains no incentive. The PDR forecloses the fix on the
+same day the platform pivot created the need for it, under a heading that carries no argument.
+
+The Prior Art Gate (kernel §6) is also incompletely applied: the table at PDR lines 40-45 has
+no row for the direct price comparables on the same rail — Copin at 0.05%, already recorded in
+5.3, and pvp.trade at 0.05%. The PDR's stated reason for 0.1% is that it is "a tenth of the
+flat-fee convention" of Telegram bots at 1% (lines 61-63), and it skips the competitors
+charging half.
+
+**R2-F15 — The legal request describes a product the discovery has already established cannot
+be built. This is the most expensive flaw here, because it is what the money buys.**
+
+Legal request line 74: the operator "**Ne choisit aucun trader.**" Q1, lines 94-97: "alors que
+nous ne sélectionnons aucun trader". Lines 39-41: "Les ordres de ce trader sont ensuite
+**répliqués automatiquement** sur le compte du membre".
+
+Section 2 of this document establishes that replication in that sense is not available:
+
+- 50–67% of a typical leader's fills are **posted**, not taken, and a copier reacting after
+  the fact cannot reproduce them (line 156);
+- most scaled orders fall under the venue's floor and are refused (line 158);
+- the run's own limits paragraph says the ways around it — fixed-size copying, threshold
+  replication — mean "**no longer running the leader's strategy**" (lines 232-234);
+- and the decider has put "**position sizing, a leverage ceiling and a kill switch**" into the
+  first cycle (line 725).
+
+So the product that ships will decide **which of the leader's orders to reproduce, at what
+size, and under what leverage cap**. That is discretion exercised by the operator over a
+member's leveraged account, and it is precisely the fact Q1 asks the lawyer to rule on — and
+precisely the fact that, per the Skadden source in 5.3, moves a service into portfolio
+management. A favourable answer to Q1 on these facts would be favourable on facts the document
+has already ruled out. Fix the facts before the letter is sent; it costs nothing and it is the
+difference between an opinion and a receipt.
+
+**R2-F16 — The request promises three qualifications and asks eight questions about two.**
+
+Legal request line 71: "Trois, et nous avons besoin d'une réponse distincte pour **chacune**",
+listing the copied traders as party 3 at lines 77-78. **No question asks about party 3.** A
+trader whose orders are replicated for strangers, on a list they consented to be on, generating
+a fee for a third party, is a plausible unauthorised provider — and if they are, flet and the
+administrators are distributing them. The letter names the party and then does not ask.
+
+**R2-F17 — The request never states the budget or the deadline, and the kill threshold is
+defined against exactly those two numbers.**
+
+The threshold in 5.2 (viability B) is: any "authorisation required" that **cannot be structured
+around inside the decider's own budget and deadline** is a kill. Q7 (legal request lines
+125-128) asks the lawyer for "un ordre de grandeur de coût et de délai". Line 745 records that
+the budget and the deadline are **still open** — for the third round running. The project is
+buying the one number the decision turns on and has not decided what number is too large. Two
+values, written down, before the letter goes out.
+
+**R2-F18 — Nothing records that the lawyer is qualified for the question.**
+
+5.2 (viability B) asks for "a lawyer qualified in the one named member state". Line 837 records
+a verbal impression from "the lawyer"; nothing anywhere records their field. A MiFID II
+investment-services question on leveraged derivatives is not a generalist's and not a
+crypto-tax practitioner's. Ask, and record the answer, before the bill.
+
+**R2-F19 — The legal signal is recorded correctly and then acted on two lines later.**
+
+Lines 837-846 state, carefully and correctly, that a verbal impression does not clear the
+threshold and is an assumption rather than a finding. Lines 851-852 then conclude: "**The link
+test (5.2, value) is no longer blocked.**"
+
+The ordering constraint round 1 set is genuinely satisfied — the legal work had to start before
+or alongside the value test, and it has started. The objection is to the placement: the release
+of the test that performs the regulated act sits in the same entry as, and immediately after,
+a favourable impression that the same entry says decides nothing. If the following sentence is
+true, write it down: **the link test is released because the legal work has started, and it
+would be released identically had the impression been unfavourable.** If it is not true, the
+test is still blocked, and the entry should say so.
+
+#### R2.5 Open items — questions the challenger would have asked
+
+Not answerable from here. They are objections until the decider answers them.
+
+1. **What is the budget, and by when?** Asked at line 129, carried into round 2 at line 745,
+   still open. Two numbers. Until they exist, the opinion the project is paying for cannot be
+   read against its own kill threshold (R2-F17).
+2. **How many members does the first server have, and how many trade perps, at what size?**
+   Round 1's open item 2, still the only missing operand of the entire forecast.
+3. **What install→active ratio does the decider believe, and what ratio would stop the
+   project?** Line 780 names it load-bearing and leaves it blank.
+4. **At what rate does flet intend to charge — 0.1%, or 0.05% like both comparables?**
+   PDR-0001 fixes the cap, not the rate, and every revenue figure in the document assumes the
+   cap.
+5. **Is the administrator paid, at platform scale?** If the answer stays no (PDR line 31),
+   what stops four hundred volunteers from stopping (R2-F14)?
+6. **What is the lawyer's field, and has the letter been sent — with which version of the
+   facts?** (R2-F15, R2-F18.)
+7. **Which signal, coming back negative, stops the project?** Third time of asking: line 220,
+   round 1's F9, line 746.
+8. **Who is liable, and as what legal person?** The operator is an unauthorised natural person.
+   The platform pivot multiplies the counterparties, and the legal request excludes "montage de
+   structure" from its scope. That exclusion was reasonable for one community and is not for an
+   open platform.
+
+#### R2.6 The challenger's verdict
+
+**Round 2 did real work, and two of its three pieces hold up.** The structural argument that an
+agent key cannot withdraw is the strongest research in the document. The whole-leaderboard
+correction of the shadow run was the right instinct, honestly flagged, and it reproduces to
+within 0.1% on an independent snapshot. The framing correction to a multi-community platform
+is almost certainly right about what the product is, and it was recorded rather than
+retrofitted.
+
+**But round 2 has made the project less likely to work, not more, and the document now says
+the opposite.** Line 766 — "the economics become plausible for the first time" — is the only
+optimistic sentence in eight hundred lines, and it is the one that does not survive
+measurement. Correct the turnover to the population the document's own selection rule produces
+and the base case falls from 382 € to 136 €; the five communities needed for 2,000 € become
+fifteen; the thirty-nine needed to match a competitor become a hundred and nine; and the
+installations needed to get there exceed the ceiling Discord puts on an unverified app. The
+pivot did not improve the economics. It replaced one known-small number with a large number of
+unknown ones, and the unknown that decides everything — how many installed servers ever produce
+a copier — has a measurable proxy on this exact rail whose median is $1,689 a month and whose
+modal value is zero.
+
+**Meanwhile the one thing that could still refute the project cheaply has been put behind two
+avoidable errors.** The legal request describes replication by an operator who selects nothing;
+the discovery has established that the product must select, size and cap. And the threshold the
+opinion is to be read against depends on a budget and a deadline that have now gone unanswered
+for three rounds.
+
+**Recommendation — the decider's call, not the challenger's:** still not a go, and not a third
+clarify on the same questions. Do four things, none of which needs code or costs more than the
+legal bill already committed:
+
+1. **Write the budget and the deadline.** One line. Everything downstream is blocked on it.
+2. **Fix the legal request before it is sent** — the facts (R2-F15), the third party (R2-F16),
+   the two numbers (R2-F17), the lawyer's field (R2-F18).
+3. **Apply for Discord verification** and read Telegram's Mini App rules. Free, one week,
+   upstream of every revenue figure.
+4. **Run the install test and the link test together**, with the P&L recorded next to the
+   retention.
+
+If the install test comes back empty, the platform pivot is the answer to a question nobody
+asked, and the honest outcome is the one the playbook calls cheapest.
 
 ## 6. Decision
 
