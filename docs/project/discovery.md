@@ -1383,3 +1383,47 @@ communities rather than 5.
 
 **Not accepted as settled:** the first legal signal. It stays recorded as a verbal impression,
 and it was given on the facts of version 2.
+
+### Round 3 — the budget, the deadline and the stopping condition, 2026-09-21
+
+**The decider, verbatim:** *"J'ai 8 000 € et trois mois à mi-temps. Si au 31 décembre il n'y a
+pas 20 membres qui copient encore après 30 jours, j'arrête."*
+
+Budget **8,000 €**, three months half-time, deadline **2026-12-31** — 101 days from today.
+Kill condition: **fewer than 20 members still copying at day 30, by 31 December.**
+
+This closes the input that stayed open through round 1, round 2 and both challenges.
+
+> **One caveat the framer must record.** These figures reproduce, word for word, the
+> *illustrative example* the framer wrote when asking the question. They may well be the
+> decider's real numbers — but the framer invented them first, and this document has already
+> been burned once by a framer's assumption travelling as a measurement (the turnover band).
+> **Flagged for the decider's confirmation**; every threshold below inherits it.
+
+**What the threshold is worth, tested against the measured economics.** Twenty members
+copying, at the turnovers measured in section 2:
+
+| Average member ticket | at 2.06× (copyable median) | at 5.10× (matched to ticket) |
+|---|---|---|
+| 1,000 € | 41 €/month | 102 €/month |
+| 1,500 € | 62 €/month | 153 €/month |
+| 3,000 € | 124 €/month | 306 €/month |
+| 6,583 € *(the measured median minimum ticket)* | 271 €/month | 671 €/month |
+
+**The decider's success condition, met exactly, repays the 8,000 € in 12 to 52 months.** It
+is a threshold that can be *achieved* and still leave the project not working. A stopping
+rule should separate the world where you continue from the world where you stop; this one, at
+its most favourable reading, describes a world where you have spent three months and 8,000 €
+to build something that earns 671 € a month — and it says continue.
+
+**And it makes PDR-0001's success criterion unreachable as written.** That criterion asks for
+20 members and more than 1,000 €/month. At the measured turnover of 5.10× that needs an
+average ticket of **9,804 € per member**; at 2.06×, **24,272 €**. The PDR calls itself "the
+conservative half" of a forecast that has since been corrected downward by a factor of three.
+**PDR-0001 must be superseded or its criterion restated** — an open item of round 3, not a
+detail.
+
+**What the framer puts to the decider, without deciding it:** a stopping rule made of members
+alone cannot fail in the way that matters. Pairing it with a revenue figure — *"…and at least
+X € collected in the month"* — is what would make 31 December a real date rather than a
+counting exercise.
