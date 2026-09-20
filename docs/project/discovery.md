@@ -1,10 +1,10 @@
 ---
-decision: proposed          # proposed | go | clarify | kill — the decider decides
+decision: clarify           # proposed | go | clarify | kill — the decider decides
 decider: "@napkinstack-admin"  # the human who decides, recorded at intake
-decided_on:                 # YYYY-MM-DD, with the decision
+decided_on: 2026-09-20      # YYYY-MM-DD, with the decision
 challenger: "agent session (challenger), 2026-09-20"  # stage 5
 idea: "docs/project/inputs/idea.md"         # the idea as given, kept in docs/project/inputs/
-round: 1
+round: 2
 ---
 
 # Discovery
@@ -83,6 +83,48 @@ the platform takes its commission. A later one may let members vote on the list.
 
 *Answered in stage 3:* the members are majority EU; the product takes no custody; the
 decider operates and collects, the administrator curates for free.
+
+---
+
+### Round 2 — can the product run without holding members' funds, and be paid only on transactions?
+
+Asked by the decider at the round-1 decision, against flaw **F2**. Same marking as above;
+*primary-negative* means the source is silent where a statement was looked for, which is not
+the same as the source denying it.
+
+| Question | What the sources say | Mark |
+|---|---|---|
+| **Can a third party place orders for a member without holding their funds?** | Yes. An API wallet — also called an agent wallet — is "an alternate signing key that a master account can authorize to sign transactions on behalf of itself or any sub-accounts". The member's funds never leave the member's own account. The delegation expires if an expiry was set, is deregistered when a new unnamed API wallet is registered, and lapses when the registering account no longer has funds. | [Hyperliquid docs, nonces and API wallets](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/nonces-and-api-wallets) — *primary* |
+| **Can that agent key withdraw or move the member's money?** | **Everything readable says no; Hyperliquid does not say it.** The API-wallets page and the exchange-endpoint page were both read looking for the prohibition and **neither enumerates what an agent may not do** — *primary-negative*. An integrator's documentation describes agent wallets as "permissioned signers that **do not hold funds** but can execute Hyperliquid actions for a master account and its subaccounts". Third-party guides state plainly that an agent wallet cannot withdraw, cannot transfer to another address and cannot approve other agents. | [Privy docs](https://docs.privy.io/recipes/hyperliquid/agents-and-subaccounts) — *secondary, integrator-grade*; the prohibition itself — *excerpt* |
+| **What the venue does say about who must sign what** | USDC transfers and spot sends are "user-signed actions", signed over the real chain id with a human-readable typed struct so a wallet can display them — a different signing path from ordinary L1 trading actions. And, stated outright for one action: `ApproveBuilderFee` "must be signed by the user's main wallet, **not an agent/API wallet**". | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint), [builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes) — *primary* |
+| **Can the product be paid purely on transactions, touching no member money?** | **Yes, and this part is fully verified.** A builder fee is taken on-chain as part of the venue's own fee logic and credited to the builder, who claims it through the standard referral reward process. No member funds pass through the product at any point. Cap: 0.1% on perps, 1% on spot. The builder must hold at least 100 USDC of perps account value and use `standard` account abstraction; a member may hold at most 10 active builder approvals. | [Builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes) — *primary* |
+| **Sub-accounts, as a risk primitive** | A sub-account is an isolated margin sandbox spawned by the master account. "Subaccounts and vaults do not have private keys" — the master account signs for them, naming the sub-account in the `vaultAddress` field. Cross-margin does not bleed between sub-accounts: a liquidation in one leaves the others untouched. | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) — *primary*; the isolation property — *excerpt* |
+| **Which vault rail carries the 10k USDC fee** | The fee is on the **legacy** rail. Current vaults are built on HyperEVM with "fully customizable accounting"; legacy vaults were "introduced in 2023 and do not support HIP-3 or spot trading". The overview page states **no fee at all**, for either rail — so "the new rail is free" is *not* established; what is established is that the 10k figure belongs to the page Hyperliquid titles "(legacy)". | [Vaults overview](https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/vaults) — *primary* for the two rails, *primary-negative* on fees |
+
+**What this settles, and what it does not.**
+
+The architecture the decider asked about **exists**: the member keeps their funds and their
+main key, approves a revocable, expirable agent key that the product holds, and the product
+is paid by the venue itself on the flow it routes, never out of the member's balance. On the
+second question — payment purely on transactions — the answer is an unqualified yes, from
+primary sources.
+
+On the first question the answer is **yes with one hole**: the product would hold **a**
+private key. Not the member's, not one that can move money out — but a key. So no-go 1
+("never hold a member's funds or private keys", line 188) does not resolve itself; it has to
+be read. Under "no custody of funds" the agent-wallet design satisfies it. Under "no key of
+any kind" it does not, and automated copying becomes impossible — leaving signal relay,
+which Skadden's analysis (section 5.3) places under investment advice rather than outside
+regulation.
+
+And a distinction the sources make that the product must not blur: an agent key **cannot
+take** the member's money, but it **can lose** it. Liquidating a leveraged position is not a
+withdrawal. Pre-mortem item 10 survives this finding intact.
+
+**The cheapest way to close the hole — one hour, testnet, no product.** Register an agent
+wallet on testnet, then attempt `withdraw3` and `usdSend` signed by that agent, and record
+what the venue answers. That converts the load-bearing claim from *excerpt* to *primary* at
+no cost. **Round-2 deliverable.**
 
 ## 3. Define
 
@@ -221,7 +263,7 @@ turns out to be worth less to them than a public track record.
 - Budget and time available — still unanswered, and needed before the charter.
 **Open questions:**
 
-## 5. Challenge
+## 5. Challenge — round 1
 
 **Challenger:** agent session (challenger), independent of the session that wrote stages 1
 to 4 · 2026-09-20
@@ -468,5 +510,40 @@ legal test sizes.
 
 ## 6. Decision
 
-<go · clarify · kill; the reasons; for a go, why each objection does not block it, and what
-the first cycle carries: spikes, no-gos.>
+### Round 1 — **clarify**, 2026-09-20, by @napkinstack-admin
+
+The challenge was presented unchanged and the decider chose **clarify**: no charter, no
+module, no code until the round-2 questions are answered and the cheap tests have run.
+
+**The reasons.**
+
+- **F2 is the question the product turns on, and it was answerable for free.** Rather than
+  decide around it, the decider asked for it to be settled on the venue's own documentation
+  first. That research is in section 2, "Round 2", and it changes the shape of the question:
+  the non-custodial architecture exists, so what remains is a reading of no-go 1, not an
+  architectural impossibility.
+- **The four tests in 5.2 cost about a week and one legal bill, and three of them can refute
+  the project before a line of code exists.** Against that, a go would have spent a build to
+  learn the same thing later. The playbook calls the cheap outcome the cheapest for a reason.
+- **Two inputs that everything else waits on are still missing**: one named country, without
+  which no legal question can even be asked, and the member count, without which the
+  viability arithmetic has no operand.
+- **The decider did not accept the challenger's premise that the idea is dead.** The core
+  claim — a member copies because someone they know vouched — was not refuted by anything in
+  section 5.3, and the link test can settle it in fourteen days.
+
+**What round 2 carries.**
+
+1. The testnet check on agent-wallet permissions (section 2, round 2) — one hour, converts
+   the load-bearing claim to primary.
+2. The reading of no-go 1: "no custody of funds", or "no key of any kind". The answer decides
+   whether there is an automated product at all.
+3. One named member state; the server's member count and how many trade Hyperliquid today;
+   the budget and the deadline.
+4. The legal scoping opinion (5.2, viability B), started **before** the link test, since the
+   link test performs the act the opinion must qualify.
+5. The link test (5.2, value), and the thresholds the decider sets on all four tests.
+
+Still open and unanswered from round 1: whether voting replaces or sits under the
+administrator's curation (F7 makes this also decide no-go 2), and which signal, coming back
+negative, stops the project.
