@@ -1,6 +1,6 @@
 # flet
 
-<One sentence: what this project does.>
+flet lets the administrator of a Discord community curate which traders its members may copy on Hyperliquid, without ever holding their funds or their keys.
 
 ---
 
