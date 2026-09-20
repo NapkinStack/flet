@@ -37,8 +37,25 @@ d'exécution ou décidé par nous, **[hypothèse]** s'il reste à confirmer.
   et ne contrôlons pas**. Ils ne sont pas rémunérés et n'ont aucun lien contractuel avec nous
   au-delà des conditions d'utilisation du bot.
 - **[établi]** Un membre choisit un trader dans la liste de son serveur. Les ordres de ce
-  trader sont ensuite **répliqués automatiquement** sur le compte du membre, **sans
+  trader sont ensuite reproduits **automatiquement** sur le compte du membre, **sans
   intervention du membre à chaque ordre**.
+- **[établi] — point que nous tenons à exposer explicitement, car il nous paraît décisif pour
+  la qualification.** La reproduction **n'est pas** une copie à l'identique, et elle ne peut
+  pas l'être :
+  - **une partie des ordres du trader n'est pas reproductible.** Quand il *pose* un ordre
+    limite exécuté plus tard, le prix est déjà passé quand nous le voyons. Mesuré sur trois
+    traders réels : de 0 % à 67 % de leurs exécutions selon le trader.
+  - **les ordres sont réduits à l'échelle du compte du membre**, et la place refuse tout
+    ordre sous 10 USDC de notionnel. Pour un membre à 500 USDC copiant un compte à 300 000,
+    nous avons mesuré que 38 % à 87 % des ordres du trader tombent sous ce plancher et ne
+    peuvent pas être passés.
+  - **nous prévoyons d'imposer nos propres limites de risque** : taille maximale de position,
+    plafond de levier, arrêt d'urgence.
+
+  Autrement dit : **nous décidons quels ordres sont reproduits, à quelle taille, et sous
+  quelles limites.** Nous ne choisissons pas les traders — ce sont les administrateurs — mais
+  nous exerçons bien un pouvoir d'appréciation sur l'exécution, sur un compte à effet de
+  levier appartenant au membre.
 - **[hypothèse]** Les membres résident dans des pays que nous **ne connaissons pas à
   l'avance** et que rien, en l'état, ne restreint. Le premier serveur visé est francophone,
   mais le produit est ouvert.
@@ -71,7 +88,8 @@ d'exécution ou décidé par nous, **[hypothèse]** s'il reste à confirmer.
 Trois, et nous avons besoin d'une réponse distincte pour chacune :
 
 1. **L'opérateur de la plateforme** : fournit le logiciel, route les ordres, perçoit la
-   commission. **Ne choisit aucun trader.**
+   commission. **Ne choisit aucun trader** — mais décide quels ordres du trader choisi sont
+   reproduits, à quelle taille, et sous quelles limites de risque (voir section 1).
 2. **Chaque administrateur de serveur** : installe le bot et sélectionne les traders
    copiables. Bénévole. Ensemble ouvert.
 3. **Les traders copiés** : tradent leur propre compte. Ils ne reçoivent rien de nous et
@@ -91,10 +109,17 @@ Sans préjuger de votre analyse, pour que vous sachiez ce que nous avons déjà 
 
 ## 4. Les questions
 
-**Q1 — L'opérateur.** Fournissons-nous un **service d'investissement** alors que nous ne
-sélectionnons aucun trader, que la sélection est faite par des tiers que nous ne contrôlons
-pas, et que nous ne détenons ni les fonds ni la clé principale du client ? Sommes-nous
-prestataire, ou fournisseur d'un outil technique ? Si prestataire : lequel, et quel agrément ?
+**Q1 — L'opérateur, et la question du pouvoir d'appréciation.** Nous ne sélectionnons aucun
+trader, la sélection est faite par des tiers que nous ne contrôlons pas, et nous ne détenons
+ni les fonds ni la clé principale du client. **Mais** nous décidons quels ordres sont
+reproduits, à quelle taille, et sous quelles limites de risque, sur un compte à levier
+appartenant au client.
+
+Fournissons-nous un **service d'investissement** ? Et surtout : **ce pouvoir d'appréciation
+sur l'exécution suffit-il, à lui seul, à faire basculer la prestation en gestion de
+portefeuille pour le compte de tiers**, indépendamment du fait que le choix du trader revienne
+à un tiers ? Si oui, existe-t-il un degré d'automatisme en deçà duquel ce ne serait plus le
+cas — par exemple si nous n'appliquions aucune limite de risque de notre fait ?
 
 **Q2 — Les administrateurs.** Chaque administrateur qui installe le bot et choisit les
 traders copiables fournit-il lui-même un service d'investissement ? Le bénévolat change-t-il

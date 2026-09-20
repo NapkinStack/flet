@@ -4,7 +4,7 @@ decider: "@napkinstack-admin"  # the human who decides, recorded at intake
 decided_on: 2026-09-20      # YYYY-MM-DD, with the decision
 challenger: "agent session (challenger), 2026-09-20; independent agent session (challenger), 2026-09-21"  # stage 5, one per round
 idea: "docs/project/inputs/idea.md"         # the idea as given, kept in docs/project/inputs/
-round: 2
+round: 3
 ---
 
 # Discovery
@@ -1338,3 +1338,48 @@ nothing has yet refuted.
 **Still owed before this section can be marked as an answer:** the written opinion, and the
 lawyer's position question by question — at minimum Q1 (the operator), Q2 (the administrators,
 and our responsibility for them), and Q4 (territoriality).
+
+### Round 2 — **clarify**, 2026-09-21, by @napkinstack-admin
+
+**A second `clarify`, chosen explicitly.** The playbook requires this to be recorded as the
+decider's deliberate choice and never as a default, and it is: the decider was presented with
+kill, go and clarify, and with the challenger's own recommendation of neither go nor a third
+round on the same questions.
+
+**The reasons.**
+
+- **Round 3 does not replay round 2's questions.** It carries what the round-2 challenge
+  showed to be missing or wrong, not what round 1 left open.
+- **The legal request was describing a product that cannot be built**, and it had already been
+  sent. That is the objection that could not wait: a favourable opinion given on those facts
+  would have been worthless, and worse, reassuring. Corrected the same day as **version 3**.
+- **The framer's forecast was wrong in the direction of optimism**, and the decider chose to
+  keep going with the corrected numbers rather than with the ones that flattered the project.
+- **The core claim is still standing.** After two rounds and two independent challenges,
+  nothing has refuted the belief that a member copies because someone they know vouched. It is
+  also still untested, which is the anomaly round 3 exists to end.
+
+**What round 3 carries.**
+
+1. **The budget and the deadline, written down.** Open since round 1, open through two
+   challenges, and the kill threshold is defined against them. Nothing else in round 3 can be
+   weighed without them.
+2. **The legal request, version 3, re-sent.** It now states the discretion: which orders are
+   reproduced, at what size, under what risk limits. Question 1 asks whether that discretion
+   alone moves the service into portfolio management.
+3. **Discord verification.** Free, about a week, and upstream of every number in the forecast
+   — an unverified application is reported to be capped at 100 servers, which the round-2
+   challenge marks *excerpt* and which must be confirmed on the primary source.
+4. **The link test, with P&L recorded beside retention** — so that a bad retention number can
+   be told apart from a bad market.
+5. **The install→active ratio**, explicitly *not found* by the challenger. Without it the
+   multi-community forecast has no operand.
+
+**Corrected in this round, not deferred:** the forecast's turnover band, which the framer had
+labelled measured when it was assumed. On the document's own selection rule the median is
+2.06×, and 5.10× once matched to the member's ticket — against the 15× assumed. The base case
+falls from 382 € to between 53 € and 130 € a month, and 2,000 €/month needs 15 to 38 active
+communities rather than 5.
+
+**Not accepted as settled:** the first legal signal. It stays recorded as a verbal impression,
+and it was given on the facts of version 2.
