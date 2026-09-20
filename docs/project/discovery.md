@@ -742,3 +742,71 @@ still performs the act ESMA's briefing points at, and still takes no share of th
 **Still open after this pass:** the server's member count and how many of them trade
 Hyperliquid today; the budget and the deadline; the thresholds on all four tests; and which
 signal, coming back negative, stops the project.
+
+---
+
+### Round 2 — the decider corrects the framing, 2026-09-21
+
+**flet is a multi-community, multi-channel product, and was meant to be from the start.**
+The bot is installable on **any** Discord server or Telegram channel, and administered by
+the admin of that server or channel. Karim's server was an example, never the product.
+
+*How the framing narrowed.* The idea file says "permettant à **une** communauté de proposer
+du copy trading à ses membres" — which reads as *any* community, generically. The framer's
+stage-1 restatement turned it into *the* community's existing channel, the decider confirmed
+that restatement, and every stage-3 question after it asked about *the* administrator and
+*the* members' country. The narrowing is the framer's, and it propagated into the legal
+work. It is corrected here rather than rewritten above.
+
+**What it changes.**
+
+**1. The economics become plausible for the first time.** Per-community figures from the
+forecast above, multiplied by the number of **active** communities:
+
+| Active communities | Minimal | Base | High |
+|---|---|---|---|
+| 1 | 30 € | 382 € | 3,750 € |
+| 5 | 150 € | 1,912 € | 18,750 € |
+| 20 | 600 € | 7,650 € | 75,000 € |
+| 50 | 1,500 € | 19,125 € | 187,500 € |
+
+To reach 2,000 €/month: 5 communities in the base case, 67 in the minimal one. To reach the
+$14,899 that pvp.trade earned last month: 39 base-case communities.
+
+**The load-bearing and untested assumption is the long tail.** Those tables count *active*
+communities, not installations. The normal shape of a self-serve product is that most
+servers install it and never produce a single active copier. Nothing here estimates that
+ratio, and it decides everything: at a 10% activation rate, 39 active communities means 390
+installations.
+
+**2. The legal question changes shape, and `legal-scoping-request.md` as written on
+2026-09-20 is wrong.** It asks whether *the operator* may serve *one French community*. The
+real question is whether an unauthorised operator may run an **open platform** that any
+administrator installs, serving members in **uncontrolled jurisdictions**, on perpetual
+futures. Three things follow that the first version never raised: the members' countries are
+no longer knowable in advance; Hyperliquid's Restricted Persons clause becomes something
+**flet must enforce** rather than something it can assume about one server; and the admins
+are no longer one identified volunteer but an open set the operator neither selects nor
+controls. The request is rewritten in the same commit as this entry.
+
+**3. Telegram re-enters the scope.** Stage 3 fixed on Discord because that is where the
+example community lives. The product needs both channels: two integrations, two platform
+policy regimes, and the Discord Developer Policy question of section 5.3 now has a Telegram
+twin that nobody has looked at.
+
+**4. Flaw F5 multiplies.** Not one unpaid curator performing the act ESMA's briefing points
+at, but one per community — an open set the operator does not choose. And flet becomes
+responsible, in fact if not in law, for what those administrators list.
+
+**5. A surface the discovery has never addressed: self-serve installation.** An
+administrator who lists themselves as a copyable trader; a server created to farm the
+product; a curated list that is a scam by design. Karim's trustworthiness was an assumption
+the whole product rested on, and it does not generalise to strangers.
+
+**6. The comparable stops being approximate.** pvp.trade is precisely a multi-group Telegram
+product on the same venue with the same fee rail. Its measured $14,899 over 30 days is now
+the direct read of what this category currently pays, not a distant analogy.
+
+**What this does not change:** the minimum member ticket and the trader-selection rule
+(section 2), both of which apply per member and per trader regardless of how many
+communities exist.
