@@ -831,3 +831,27 @@ that points at question 8 of the legal scoping request.
 by somebody else. flet cannot raise its take; it can only lower it. Everything therefore
 rests on the number of **active** communities, which is the untested long-tail assumption
 recorded above.
+
+### Round 2 — first legal signal, 2026-09-21
+
+**The decider reports that the lawyer "seems favourable".** Recorded for what it is, and no
+more: a **preliminary verbal impression relayed by the decider**, not the written opinion
+that test 5.2 (viability B) asks for, and not attributed to any of the eight questions. No
+document was received. *Assumption, not finding.*
+
+**What it does not do.** The threshold the challenger set, and the decider did not replace,
+is explicit: *any "authorisation required" for either party, that cannot be structured around
+inside the budget, is a kill and not a clarify*. A favourable impression does not clear that
+threshold, because the threshold is about **which** party and **which** question. Favourable
+on Q1 — the operator, who selects no trader — while reserved on Q4 — the territoriality of an
+open platform whose members' countries are unknown — describes a different product from the
+reverse.
+
+**What it does do.** The challenger's ordering constraint is satisfied: the legal work had to
+start **before or alongside** the value test, never after. It has started. **The link test
+(5.2, value) is no longer blocked** and is the cheapest remaining test of the one claim
+nothing has yet refuted.
+
+**Still owed before this section can be marked as an answer:** the written opinion, and the
+lawyer's position question by question — at minimum Q1 (the operator), Q2 (the administrators,
+and our responsibility for them), and Q4 (territoriality).
