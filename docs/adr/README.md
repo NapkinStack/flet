@@ -22,3 +22,4 @@ See `docs/os/06-decisions.md`.
 
 | No. | Title | Status | Criterion to check on |
 |---|---|---|---|
+| [0001](./0001-split-the-agent-github-identity-in-two.md) | Split the agent's forge identity in two: the App commits, the administration token configures | Accepted | 2027-03-20 |
