@@ -268,6 +268,11 @@ turns out to be worth less to them than a public track record.
 **Challenger:** agent session (challenger), independent of the session that wrote stages 1
 to 4 · 2026-09-20
 
+> **Line references in this section are to the document as at commit `b77915b`** — the
+> revision the challenger read. Round-2 material was later added to section 2, which shifted
+> every line after it; resolve a citation against that commit, not against the current file.
+> Nothing in this section has been edited since it was written.
+
 > Section 1 is confirmed (line 17), so this challenge is against the document as written.
 > `docs/tooling-profile.md` declares no research tool, so — as in stage 2 — this round used
 > the tools at hand: the agent's web search and page fetch, named at each finding. Same
@@ -547,3 +552,42 @@ module, no code until the round-2 questions are answered and the cheap tests hav
 Still open and unanswered from round 1: whether voting replaces or sits under the
 administrator's curation (F7 makes this also decide no-go 2), and which signal, coming back
 negative, stops the project.
+
+---
+
+### Round 2 — the decider's answers, 2026-09-20
+
+**1. Version B: automated copying, accepted.** flet holds **one agent key per member** — a
+second key, registered by the member's own main wallet, able to place and cancel orders on
+that member's account and nothing else, revocable by the member at any time and able to
+carry an expiry. The **traders' side needs no key at all**: their positions are public
+on-chain, and flet reads their address.
+
+- **No-go 1 is reworded by the decider** to *never hold a member's funds or a member's main
+  key*. The round-1 wording ("funds or private keys", section 4) stands above as adopted and
+  is superseded here, not deleted.
+- **The testnet check becomes blocking.** No code until it is established, on the venue
+  itself, that an agent key cannot withdraw or transfer. If it turns out that it can, this
+  answer is void and the product falls back to version A — the member signs each trade.
+- **What this does not change:** an agent key cannot *take* a member's money but can *lose*
+  it. Pre-mortem item 10 stands, and it is now a design constraint rather than a worry:
+  position sizing, a leverage ceiling and a kill switch belong to the first cycle, not later.
+
+**2. France is the launch country.** The legal scoping (5.2, viability B) is on French law
+and must cover **both parties** — the operator and the administrator who curates — plus the
+separate question of whether the administrator's announcement post is restricted promotion of
+an unregistered service. The decider foresees extending abroad; that is **re-asked country by
+country**, since nothing found for France transposes automatically. F4 is closed for round 2
+only.
+
+**3. Voting sits under the administrator, who keeps a veto.** Members propose and vote; the
+administrator validates or refuses. The vouching stays theirs, so the value hypothesis
+survives, and F7's contradiction is resolved in favour of no-go 2 — **on paper only**:
+members will still argue from displayed performance in the channel, where no-go 2 cannot be
+enforced. Recorded as a residual, not as closed. Unchanged either way: the administrator
+still performs the act ESMA's briefing points at, and still takes no share of the commission
+(F5).
+
+**Still open after this pass:** the server's member count and how many of them trade
+Hyperliquid today; the budget and the deadline; the thresholds on all four tests; and which
+signal, coming back negative, stops the project.
