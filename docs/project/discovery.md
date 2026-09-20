@@ -95,7 +95,7 @@ the same as the source denying it.
 | Question | What the sources say | Mark |
 |---|---|---|
 | **Can a third party place orders for a member without holding their funds?** | Yes. An API wallet — also called an agent wallet — is "an alternate signing key that a master account can authorize to sign transactions on behalf of itself or any sub-accounts". The member's funds never leave the member's own account. The delegation expires if an expiry was set, is deregistered when a new unnamed API wallet is registered, and lapses when the registering account no longer has funds. | [Hyperliquid docs, nonces and API wallets](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/nonces-and-api-wallets) — *primary* |
-| **Can that agent key withdraw or move the member's money?** | **Everything readable says no; Hyperliquid does not say it.** The API-wallets page and the exchange-endpoint page were both read looking for the prohibition and **neither enumerates what an agent may not do** — *primary-negative*. An integrator's documentation describes agent wallets as "permissioned signers that **do not hold funds** but can execute Hyperliquid actions for a master account and its subaccounts". Third-party guides state plainly that an agent wallet cannot withdraw, cannot transfer to another address and cannot approve other agents. | [Privy docs](https://docs.privy.io/recipes/hyperliquid/agents-and-subaccounts) — *secondary, integrator-grade*; the prohibition itself — *excerpt* |
+| **Can that agent key withdraw or move the member's money?** | **No — and the reason is structural, not a policy that could change.** `withdraw3` signs over exactly `hyperliquidChain`, `signatureChainId`, `amount`, `time`, `destination`; `usdSend` over `hyperliquidChain`, `signatureChainId`, `destination`, `amount`, `time`. **Neither payload has any field naming an account to act on behalf of** — no `vaultAddress`, no master address, nothing. Order actions do have that field, which is how they act for a sub-account or a vault. So the account debited by a withdrawal is simply whoever signed it: an agent key signing `withdraw3` withdraws from the agent key's own empty address. The action format cannot express "withdraw from the account that authorised me". | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) — *primary, structural*. Corroborating: [Privy](https://docs.privy.io/recipes/hyperliquid/agents-and-subaccounts) calls agent wallets "permissioned signers that **do not hold funds**" — *secondary*. Note: the docs still never state the prohibition as a sentence — *primary-negative* — so this is an argument from the documented payload shape, and it is only as complete as the documentation. |
 | **What the venue does say about who must sign what** | USDC transfers and spot sends are "user-signed actions", signed over the real chain id with a human-readable typed struct so a wallet can display them — a different signing path from ordinary L1 trading actions. And, stated outright for one action: `ApproveBuilderFee` "must be signed by the user's main wallet, **not an agent/API wallet**". | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint), [builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes) — *primary* |
 | **Can the product be paid purely on transactions, touching no member money?** | **Yes, and this part is fully verified.** A builder fee is taken on-chain as part of the venue's own fee logic and credited to the builder, who claims it through the standard referral reward process. No member funds pass through the product at any point. Cap: 0.1% on perps, 1% on spot. The builder must hold at least 100 USDC of perps account value and use `standard` account abstraction; a member may hold at most 10 active builder approvals. | [Builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes) — *primary* |
 | **Sub-accounts, as a risk primitive** | A sub-account is an isolated margin sandbox spawned by the master account. "Subaccounts and vaults do not have private keys" — the master account signs for them, naming the sub-account in the `vaultAddress` field. Cross-margin does not bleed between sub-accounts: a liquidation in one leaves the others untouched. | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) — *primary*; the isolation property — *excerpt* |
@@ -121,10 +121,29 @@ And a distinction the sources make that the product must not blur: an agent key 
 take** the member's money, but it **can lose** it. Liquidating a leveraged position is not a
 withdrawal. Pre-mortem item 10 survives this finding intact.
 
-**The cheapest way to close the hole — one hour, testnet, no product.** Register an agent
-wallet on testnet, then attempt `withdraw3` and `usdSend` signed by that agent, and record
-what the venue answers. That converts the load-bearing claim from *excerpt* to *primary* at
-no cost. **Round-2 deliverable.**
+**The empirical confirmation is blocked, and the structural finding largely replaces it.**
+
+The plan was: register an agent wallet on testnet, attempt `withdraw3` and `usdSend` with it,
+record the refusal. It cannot be run from here. Hyperliquid's own faucet page states that to
+receive the 1,000 mock USDC "you need to have deposited on mainnet with the same address"
+(*primary*), and the documentation describes no other route to testnet balance. A throwaway
+address cannot be funded without a real mainnet deposit, which is the decider's money and was
+not spent.
+
+What replaced it is arguably stronger: the payload analysis above shows *why* an agent cannot
+withdraw, rather than merely observing that one attempt failed. Its weakness is different —
+it assumes the documented payload list is complete.
+
+**What is still not established**, and would need either the testnet run or a statement from
+the venue:
+
+- Whether an agent key can call `approveAgent` and register a further agent.
+- Whether `usdClassTransfer` and `subAccountTransfer` accept an agent signature; the docs do
+  not say, and `subAccountTransfer` is not documented on the page read.
+
+Neither lets an agent move money to a stranger's address on the evidence above, but neither
+is closed. **Round-2 item, for whoever holds a mainnet-activated address** — an hour of their
+time, not a purchase.
 
 ## 3. Define
 
@@ -566,9 +585,15 @@ on-chain, and flet reads their address.
 - **No-go 1 is reworded by the decider** to *never hold a member's funds or a member's main
   key*. The round-1 wording ("funds or private keys", section 4) stands above as adopted and
   is superseded here, not deleted.
-- **The testnet check becomes blocking.** No code until it is established, on the venue
-  itself, that an agent key cannot withdraw or transfer. If it turns out that it can, this
-  answer is void and the product falls back to version A — the member signs each trade.
+- **The testnet check was made blocking by the decider, and the evidence has since moved.**
+  The empirical run is blocked: the faucet requires a prior mainnet deposit from the same
+  address (*primary*), so a throwaway address cannot be funded without spending real money.
+  In its place, the payload analysis in section 2 establishes structurally, from primary
+  documentation, that a withdrawal or transfer signed by an agent key debits that agent's own
+  address — the action format has no field for acting on behalf of the account that
+  authorised it. **Whether that satisfies the blocking condition is the decider's to say.**
+  Two narrower questions remain open there: whether an agent may register another agent, and
+  whether the two internal-transfer actions accept an agent signature.
 - **What this does not change:** an agent key cannot *take* a member's money but can *lose*
   it. Pre-mortem item 10 stands, and it is now a design constraint rather than a worry:
   position sizing, a leverage ceiling and a kill switch belong to the first cycle, not later.
