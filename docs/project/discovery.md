@@ -1,10 +1,10 @@
 ---
-decision: proposed          # proposed | go | clarify | kill — the decider decides
+decision: clarify           # proposed | go | clarify | kill — the decider decides
 decider: "@napkinstack-admin"  # the human who decides, recorded at intake
-decided_on:                 # YYYY-MM-DD, with the decision
-challenger: ""              # stage 5: @human, or the agent session — required for a go
+decided_on: 2026-09-20      # YYYY-MM-DD, with the decision
+challenger: "agent session (challenger), 2026-09-20"  # stage 5
 idea: "docs/project/inputs/idea.md"         # the idea as given, kept in docs/project/inputs/
-round: 1
+round: 2
 ---
 
 # Discovery
@@ -83,6 +83,67 @@ the platform takes its commission. A later one may let members vote on the list.
 
 *Answered in stage 3:* the members are majority EU; the product takes no custody; the
 decider operates and collects, the administrator curates for free.
+
+---
+
+### Round 2 — can the product run without holding members' funds, and be paid only on transactions?
+
+Asked by the decider at the round-1 decision, against flaw **F2**. Same marking as above;
+*primary-negative* means the source is silent where a statement was looked for, which is not
+the same as the source denying it.
+
+| Question | What the sources say | Mark |
+|---|---|---|
+| **Can a third party place orders for a member without holding their funds?** | Yes. An API wallet — also called an agent wallet — is "an alternate signing key that a master account can authorize to sign transactions on behalf of itself or any sub-accounts". The member's funds never leave the member's own account. The delegation expires if an expiry was set, is deregistered when a new unnamed API wallet is registered, and lapses when the registering account no longer has funds. | [Hyperliquid docs, nonces and API wallets](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/nonces-and-api-wallets) — *primary* |
+| **Can that agent key withdraw or move the member's money?** | **No — and the reason is structural, not a policy that could change.** `withdraw3` signs over exactly `hyperliquidChain`, `signatureChainId`, `amount`, `time`, `destination`; `usdSend` over `hyperliquidChain`, `signatureChainId`, `destination`, `amount`, `time`. **Neither payload has any field naming an account to act on behalf of** — no `vaultAddress`, no master address, nothing. Order actions do have that field, which is how they act for a sub-account or a vault. So the account debited by a withdrawal is simply whoever signed it: an agent key signing `withdraw3` withdraws from the agent key's own empty address. The action format cannot express "withdraw from the account that authorised me". | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) — *primary, structural*. Corroborating: [Privy](https://docs.privy.io/recipes/hyperliquid/agents-and-subaccounts) calls agent wallets "permissioned signers that **do not hold funds**" — *secondary*. Note: the docs still never state the prohibition as a sentence — *primary-negative* — so this is an argument from the documented payload shape, and it is only as complete as the documentation. |
+| **What the venue does say about who must sign what** | USDC transfers and spot sends are "user-signed actions", signed over the real chain id with a human-readable typed struct so a wallet can display them — a different signing path from ordinary L1 trading actions. And, stated outright for one action: `ApproveBuilderFee` "must be signed by the user's main wallet, **not an agent/API wallet**". | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint), [builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes) — *primary* |
+| **Can the product be paid purely on transactions, touching no member money?** | **Yes, and this part is fully verified.** A builder fee is taken on-chain as part of the venue's own fee logic and credited to the builder, who claims it through the standard referral reward process. No member funds pass through the product at any point. Cap: 0.1% on perps, 1% on spot. The builder must hold at least 100 USDC of perps account value and use `standard` account abstraction; a member may hold at most 10 active builder approvals. | [Builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes) — *primary* |
+| **Sub-accounts, as a risk primitive** | A sub-account is an isolated margin sandbox spawned by the master account. "Subaccounts and vaults do not have private keys" — the master account signs for them, naming the sub-account in the `vaultAddress` field. Cross-margin does not bleed between sub-accounts: a liquidation in one leaves the others untouched. | [Exchange endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) — *primary*; the isolation property — *excerpt* |
+| **Which vault rail carries the 10k USDC fee** | The fee is on the **legacy** rail. Current vaults are built on HyperEVM with "fully customizable accounting"; legacy vaults were "introduced in 2023 and do not support HIP-3 or spot trading". The overview page states **no fee at all**, for either rail — so "the new rail is free" is *not* established; what is established is that the 10k figure belongs to the page Hyperliquid titles "(legacy)". | [Vaults overview](https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/vaults) — *primary* for the two rails, *primary-negative* on fees |
+
+**What this settles, and what it does not.**
+
+The architecture the decider asked about **exists**: the member keeps their funds and their
+main key, approves a revocable, expirable agent key that the product holds, and the product
+is paid by the venue itself on the flow it routes, never out of the member's balance. On the
+second question — payment purely on transactions — the answer is an unqualified yes, from
+primary sources.
+
+On the first question the answer is **yes with one hole**: the product would hold **a**
+private key. Not the member's, not one that can move money out — but a key. So no-go 1
+("never hold a member's funds or private keys", line 188) does not resolve itself; it has to
+be read. Under "no custody of funds" the agent-wallet design satisfies it. Under "no key of
+any kind" it does not, and automated copying becomes impossible — leaving signal relay,
+which Skadden's analysis (section 5.3) places under investment advice rather than outside
+regulation.
+
+And a distinction the sources make that the product must not blur: an agent key **cannot
+take** the member's money, but it **can lose** it. Liquidating a leveraged position is not a
+withdrawal. Pre-mortem item 10 survives this finding intact.
+
+**The empirical confirmation is blocked, and the structural finding largely replaces it.**
+
+The plan was: register an agent wallet on testnet, attempt `withdraw3` and `usdSend` with it,
+record the refusal. It cannot be run from here. Hyperliquid's own faucet page states that to
+receive the 1,000 mock USDC "you need to have deposited on mainnet with the same address"
+(*primary*), and the documentation describes no other route to testnet balance. A throwaway
+address cannot be funded without a real mainnet deposit, which is the decider's money and was
+not spent.
+
+What replaced it is arguably stronger: the payload analysis above shows *why* an agent cannot
+withdraw, rather than merely observing that one attempt failed. Its weakness is different —
+it assumes the documented payload list is complete.
+
+**What is still not established**, and would need either the testnet run or a statement from
+the venue:
+
+- Whether an agent key can call `approveAgent` and register a further agent.
+- Whether `usdClassTransfer` and `subAccountTransfer` accept an agent signature; the docs do
+  not say, and `subAccountTransfer` is not documented on the page read.
+
+Neither lets an agent move money to a stranger's address on the evidence above, but neither
+is closed. **Round-2 item, for whoever holds a mainnet-activated address** — an hour of their
+time, not a purchase.
 
 ## 3. Define
 
@@ -221,26 +282,337 @@ turns out to be worth less to them than a public track record.
 - Budget and time available — still unanswered, and needed before the charter.
 **Open questions:**
 
-## 5. Challenge
+## 5. Challenge — round 1
 
-**Challenger:** <@human, or the agent session> · <date>
+**Challenger:** agent session (challenger), independent of the session that wrote stages 1
+to 4 · 2026-09-20
 
-**Pre-mortem:** <the reasons, each tagged with its risk>
+> **Line references in this section are to the document as at commit `b77915b`** — the
+> revision the challenger read. Round-2 material was later added to section 2, which shifted
+> every line after it; resolve a citation against that commit, not against the current file.
+> Nothing in this section has been edited since it was written.
 
-**The four risks:**
+> Section 1 is confirmed (line 17), so this challenge is against the document as written.
+> `docs/tooling-profile.md` declares no research tool, so — as in stage 2 — this round used
+> the tools at hand: the agent's web search and page fetch, named at each finding. Same
+> marking: *primary* — read on the source's own site; *reported* — a figure a company
+> states about itself; *excerpt* — seen only in a search result; *assumption* — unsourced.
+> Arithmetic done here from sourced figures is marked *derived*.
+
+### 5.1 Pre-mortem
+
+It is September 2027. flet shipped. It is being wound down. The plausible reasons:
+
+1. **Nobody clicked copy.** Thirty members connected a wallet over the year, four started a
+   copy, one was still copying at day 60. The commission for the whole year did not cover a
+   month of the build. The community liked the idea and did not use it. *(value)*
+2. **Onboarding broke the promise at step one.** Before a member could copy anything they
+   had to leave Discord, open a wallet, and sign `ApproveBuilderFee` with their main wallet,
+   then approve an agent wallet. Most people stopped at the wallet screen. The product that
+   shipped was "a Discord link to a web page", which is what the press release said it was
+   not. *(usability)*
+3. **The copies did not track.** Members entered behind the leader, at worse prices, with
+   position sizes scaled to smaller accounts. On leveraged perps, several copiers were
+   liquidated in weeks where the leader was not. The community blamed the administrator who
+   had vouched for the trader. *(feasibility → value)*
+4. **The administrator stopped curating.** They took no share (line 114), the work was
+   unpaid, and after three weeks the list went stale. What remained was pvp.trade with fewer
+   features. *(value / viability)*
+5. **Voting turned curation into a leaderboard.** Members had no basis to vote on but
+   screenshots of P&L, so they voted on P&L. The differentiator — an administrator's
+   vouching (line 154) — was replaced by the ranking it was supposed to beat, and no-go 2
+   (line 189) was broken in the channel, by members, where it could not be enforced. *(value)*
+6. **A member lost money and asked who was responsible.** The operator was an unauthorised
+   natural person, the members were EU residents, the instrument was perpetual futures, and
+   the central act was a curated list of traders to copy. There was no good answer, and the
+   cheapest response was to shut down. *(viability)*
+7. **The administrator was told they were exposed too.** Nobody had ever explained that
+   selecting the traders — for free, for someone else's commission — is the act regulators
+   look at. They removed the bot the same week. *(viability)*
+8. **The alternatives were already there and cheaper.** Copin routes non-custodial
+   Hyperliquid copy trades at a reported 0.05% of trade size; HyperMirror at 0.1%. The
+   community used a link. *(value)*
+9. **The arithmetic never worked.** At the venue's 0.1% cap, the community had to generate
+   €2,000,000 of notional a month to pay €2,000 a month. It generated a fraction of that.
+   *(viability)*
+10. **"Non-custodial" did not survive contact.** To copy automatically, flet held an agent
+    key able to trade the member's account. One scare — a bug, a bad fill loop, a rumour of
+    a leak — and the trust the whole product was built on was gone. *(feasibility / viability)*
+
+### 5.2 The four risks
+
+Thresholds below are **proposed by the challenger**. They are the decider's to set.
 
 | Risk | Riskiest assumption | Cheapest test — and the result that refutes it |
 |---|---|---|
-| Value | | |
-| Usability | | |
-| Feasibility | | |
-| Viability | | |
+| **Value** | Lines 154-156: a member copies **because a trusted administrator vouched**, not because of a track record — and enough of them do it, and keep doing it, to matter. Nothing in stages 1 to 4 tests this; stage 3 concedes the problem is not quoted from users (line 98). | **The link test. No code, one Discord message, 30 days.** The administrator posts, in their own name, a shortlist of 3 traders they vouch for, with a link to an existing non-custodial Hyperliquid copy tool (Copin, HyperMirror). That is flet minus the Discord integration. Count at day 14 and day 30: clicks, wallets connected, copies started, copies still open. **Refuted if** the endorsement moves too few people. *Proposed threshold: fewer than 10 members start a copy within 14 days, or fewer than 5 still copying at day 30.* This also settles stage 4's own falsifier (line 159): if they copy through the existing tool, they would have copied through the existing tool. |
+| **Usability** | Line 24 and lines 172-174: the member copies **"without leaving Discord"**. Refuted on its face by the source stage 2 itself cites: `ApproveBuilderFee` "must be signed by the user's main wallet, not an agent/API wallet" (*primary*, Hyperliquid builder-codes docs, also recorded at line 56). A Discord bot cannot produce that signature. | **Walkthrough of the real onboarding path, one week, no backend.** A throwaway page: Discord message → browser → connect wallet → sign `ApproveBuilderFee` on testnet → approve an agent wallet → back to Discord. Sit with 5 members of the target community, 30 minutes each, unaided, screen shared. **Refuted if** they cannot get through it. *Proposed threshold: 2 or more of 5 fail to complete unaided in under 10 minutes.* If refuted, the press release (lines 165-180) is describing a product that cannot be built as described, and must be rewritten **before** any go. |
+| **Feasibility** | That a copy can be mirrored faithfully enough to be worth paying for, **and** that it can be done without flet holding a key that can lose the member's money — while budget and time are still unknown (line 129). | **Two-week shadow run, read-only, no keys, no orders.** Watch the fills of 3 traders the administrator would authorise; simulate a proportional copy for a 1,000 USDC account; record entry slippage against the leader's fill and whether the simulated copier would have been liquidated in a window where the leader was not. **Refuted if** the copy diverges enough to harm the copier. *Proposed threshold: median entry slippage above 15 bps, or any simulated liquidation the leader did not suffer.* **And, separately, before any code:** write down who holds the agent-wallet key. See flaw F2 — as no-go 1 is written (line 188), the answer may be that nobody can, which means there is no product. |
+| **Viability** | Lines 121-122 and 140: a flat commission the venue caps at **0.1% of notional** pays for this. And lines 123-127: an unauthorised operator can serve EU residents perpetual futures with a curated trader list. | **(A) Economics, one afternoon, no code.** Get from the administrator the member count and the number who trade Hyperliquid today; get from the candidate traders their real monthly notional (they are community members — a read-only address is enough). Compute month-6 revenue = 0.001 × copiers × notional per copier. **Refuted if** the honest optimistic number is trivial. *Proposed threshold: below €1,000/month at month 6.* Calibration, verified below: pvp.trade — same venue, same builder-code rail, 50k+ monthly users claimed — earned **$14,899 in the trailing 30 days**. **(B) Law, two weeks, one bill.** A written scoping opinion from a lawyer qualified in **the one named member state** where most members live, on one question: does an unauthorised natural person operating a Discord bot that lets residents of that state pick a curated trader and routes their perps orders to Hyperliquid for a fee on notional provide an investment service requiring authorisation — **and does the administrator who curates the list provide one?** **Refuted if** the answer is yes for either party. *Proposed threshold: any "authorisation required" that cannot be structured around inside the decider's own budget and deadline is a kill, not a clarify.* The question cannot be asked yet: line 116 says only "majority EU" and names no country. |
 
-**Counter-evidence:**
+**One honest complication with test A above (value):** the link test has the administrator
+publicly recommend traders. That is the act ESMA's briefing points at (line 58). The
+cheapest value test therefore carries the exposure the legal test is meant to size. Test
+**(B)** should start first, or at the same time — not after.
 
-**Flaws in stages 1 to 4:** <each citing its line>
+### 5.3 Counter-evidence
+
+Tools: the agent's web search and page fetch.
+
+| Finding | What it contradicts | Mark / source |
+|---|---|---|
+| **pvp.trade's revenue has collapsed.** Trailing 24h **$180**, 7d **$1,412**, 30d **$14,899**, 12 months **$502,489**, all-time **$8,005,840**. Daily series 7–18 Sept 2026: $31 to $761. | The closest comparable — same venue, same builder-code rail, same "trade in the group chat" act, VC-backed, 50k+ monthly users claimed (line 57) — earns about **$500/day averaged over a year and about $180 on a recent day**. 94% of everything it ever earned was earned before the last twelve months. Stage 2 cites pvp.trade as the competitor to beat; the readable number says the category it competes in is not currently paying. A single Discord community is a small fraction of 50k users. | *primary* — read directly from the DefiLlama API, `https://api.llama.fi/summary/fees/pvp.trade`. DefiLlama is an aggregator, not the company; figure is what DefiLlama reports. |
+| **Non-custodial Hyperliquid copy trading already ships, at or below the cap.** **Copin**: "0.05% fee on trade size when opening copy trade positions", executed via an API wallet. **HyperMirror**: mirrors a basket of up to 10 Hyperliquid traders in isolated sub-accounts, non-custodial, "a 0.1% builder fee". **HyperX** and **HyperDash** named alongside them. | Directly contradicts stage 2's open assumption (lines 66-67) that Copin's fees are "not found", and undercuts the differentiator at line 157: a trader does **not** need a 10k USDC vault to be copied non-custodially — three or more shipped products already provide that. flet's only remaining difference is the curated list and the Discord surface. It also fixes the price ceiling: a competitor charges **half** the cap. | Copin fee — *excerpt*, `hyperliquidguide.com/guides/trading/copy-trading-guide`, third-party guide, not Copin's own site. HyperMirror — *excerpt*, search result; `hypermirror.io` refused the connection from this sandbox and could not be read. |
+| **Hyperliquid's own copy-trading mechanism cited at line 55 is labelled legacy.** The page stage 2 cites is titled "For vault leaders **(legacy)**"; its figures verify exactly (10% profit share, 100 USDC minimum leader deposit, "Creating a vault requires a 10k USDC gas fee", "maintain ≥5% of the vault at all times"). But the vaults overview says current HyperEVM vaults are "a strict improvement over the 'legacy' HyperCore vaults, which were introduced in 2023" and states **no 10k fee** for them. | The 10k USDC figure is real but attached to a deprecated rail. Stage 4 leans on it — "it is why the trader does not need the 10k USDC a Hyperliquid vault costs to open" (line 157) — as if it were a durable barrier. It is not: the replacement path is a deployable contract, and competitors have already routed around it. | *primary* — both Hyperliquid docs pages read directly. The claim that the new path carries no comparable fee is *primary-negative* (the page states none), not a positive finding. |
+| **Promoting an unregistered crypto service in France is itself restricted.** Advertising digital-asset services is prohibited unless the provider is registered or approved with the AMF; the 2023 influencer law (n° 2023-451, 9 June 2023) extended this to social-media promotion; intermediaries — media, YouTubers, influencers — can be caught in the infringement; penalties cited up to €100,000, and up to €300,000 and two years for influencer breaches. | Stages 1 to 4 analyse whether the **operator** may provide the service (lines 123-127). They never ask whether the **administrator may promote it to their own members**. If the community is French, the administrator's post announcing flet may be the offence, and the administrator is the unpaid party (line 114). This is a new exposure, on the person whose participation the whole product depends on. | Law-firm analysis read directly: `orwl.fr/en/how-to-lawfully-promote-crypto-services-in-france/` — *primary for ORWL's statement, secondary for the law*. Influencer-law penalties — *excerpt*. Not verified against Légifrance; do not rely on the figures without counsel. |
+| **Copy trading with discretion is portfolio management; without it, advice.** "services that provide the service provider with investment discretion by automatically executing the trade signals of third parties will regularly qualify as portfolio management"; "services that require client action prior to the execution of a transaction may qualify as investment advice or investment brokerage". | Corroborates line 58 from an independent source and closes the escape hatch: **both** designs are regulated. A version where the member confirms each trade does not escape MiFID II — it just moves from portfolio management to advice. There is no "make it manual and it's fine" fallback. | *primary* — Skadden, `skadden.com/insights/publications/2025/05/update-on-mica-implementation`, read directly. Law-firm analysis, not a regulator's text. |
+| **Unauthorised signal/copy operations in chat apps do get named by regulators.** FCA warning list entry for **Signals2Trades** (published 09/03/2026, updated 10/03/2026): "This firm may be providing or promoting financial services or products without our permission", operating via website, Facebook, TikTok and Telegram. CySEC has added Telegram "forex signals" channels to its warning list; the FSCA (South Africa) brought an enforcement action over forex signals published via Telegram; a Hong Kong court convicted the operator of a subscription Telegram group. | The failure mode in pre-mortem item 6 is not hypothetical, and the cheapest regulatory outcome is not a fine — it is being named on a public warning list, which ends distribution instantly. | FCA entry — *primary*, read directly. CySEC / FSCA / Hong Kong — *excerpt*. |
+| **Discord's Developer Policy restricts financial handling by apps.** Developers may not use applications to obtain or transmit financial information or other sensitive information under applicable law except as specifically allowed, and apps monetising through Discord's services must follow its Monetization Terms. | A platform risk absent from stages 1 to 4: the distribution channel is a third party with its own rules, and flet's whole surface is a Discord app that routes financial transactions. Whether this clause bites is unknown — but the document treats Discord as neutral ground, and it is not. | *excerpt* — search result quoting `support-dev.discord.com` Developer Policy; the page returned HTTP 403 to this session's fetch and could **not** be read directly. **Must be read on the primary source before any go.** |
+| **Hyperliquid's Restricted Persons clause could not be verified — again.** The definition circulating (US residents/citizens, Ontario, sanctioned territories) matches line 60, but `app.hyperliquid.xyz/terms` renders in JavaScript and returned only the page header to this session too. | Line 60's own caveat stands, independently confirmed. It is still *excerpt* after two sessions tried. A Discord server has no reliable geography and flet proposes no KYC; "majority EU" (line 116) concedes a minority that is not. | *excerpt*, and an explicit **not verified**. |
+| **Copy trading's base rate is poor, and regulators say so.** IOSCO notes users rely heavily on historical performance when selecting traders and may underestimate leverage and strategy-change risk; the FCA warns retail investors use copy trading to reach high-risk leveraged products without understanding them. | Bears on retention, which is success signal 1 (line 139). If copiers lose money at the usual rate, the 60-day retention number will be bad for reasons that have nothing to do with whether the administrator's endorsement works — and the value test will read as refuted when the hypothesis was never the problem. Design the value test to record P&L alongside retention. | *excerpt* — both seen only in search results; neither IOSCO's nor the FCA's own document was read. Treat as directional, not as a figure. |
+
+**Explicitly not found:**
+
+- No shut-down, insolvency or regulatory closure of a named copy-trading platform was found.
+  Searches on ayondo, ZuluTrade and Darwinex returned operating businesses. One *excerpt*
+  claims FxPro closed its SuperTrader service in 2017; not verified. **The "failed
+  competitor" evidence the playbook asks for does not exist in readable form** — the
+  counter-evidence here is a live competitor's collapsing revenue, not a graveyard.
+- No ESMA or national enforcement action against a firm specifically for unauthorised **copy
+  trading** was found in 2024-2026. Absence of enforcement is not absence of exposure, and
+  it is also not evidence of tolerance.
+- **Still nothing, either way, on an administrator-curated list restricted to one community**
+  (stage 2, lines 68-69). The claimed novelty remains unverified after a second independent
+  search. *Assumption.*
+
+**Derived, from sourced figures — not a finding:**
+
+- At the verified 0.1% cap, **€1,000/month of commission requires €1,000,000 of member
+  notional per month**; €2,000 requires €2,000,000. *derived* from the builder-code cap.
+- pvp.trade's $14,899 over 30 days implies **at most ~$14.9M of notional** in that window if
+  it charges the full cap, and more if it charges less. *derived.*
+- Stage 2's own line 62 — a signal subscription at $30-300/month — means an administrator
+  with 100 paying members earns $3,000-30,000/month from the alternative, against a flet
+  commission pool that pre-mortem item 9 suggests will be in the hundreds. *derived* from an
+  *excerpt*-grade figure; the conclusion is only as good as that row.
+
+### 5.4 Flaws in stages 1 to 4
+
+**F1 — Line 157 rests the differentiator on a deprecated fee.** "it is why the trader does
+not need the 10k USDC a Hyperliquid vault costs to open". The 10k figure verifies, on a page
+Hyperliquid titles "For vault leaders **(legacy)**". The current vault rail is described as
+"a strict improvement over the 'legacy' HyperCore vaults" and no such fee is stated for it.
+And whatever the vault costs, **Copin, HyperMirror, HyperX and HyperDash already copy
+Hyperliquid traders non-custodially without one**. The 10k USDC is not a moat. Remove it
+from the value hypothesis and what remains is: *curation by a trusted administrator, inside
+Discord*. That is the real claim and it should stand alone. (Minor, same line-55 row: "minimum
+deposit 100 USDC" is the **leader's** minimum deposit per the source, not the member's.)
+
+**F2 — Line 188 (no-go 1) may forbid the product. This is the most important flaw here.**
+"Never hold a member's funds or private keys" is adopted. Lines 117-120 say flet "routes
+orders the member's own wallet signs". Both cannot be true of automated copy trading on
+Hyperliquid. Placing orders without the member present requires an approved **agent / API
+wallet** — "A master account can approve API wallets to sign on behalf of the master
+account" (*primary*, Hyperliquid docs). Someone holds that key. If flet holds it, no-go 1 is
+broken from the first copy. If the member holds it, they sign every trade and it is signal
+relay, not copy trading — and per Skadden that version is still regulated, as advice. The
+third-party evidence points the same way: Copin's model is described as "requires sharing
+private key with platform" (*excerpt*). **The document does not notice this.** It should be
+resolved before anything else, because the answer determines whether there is a product.
+Note also, verified: the docs I read do **not** state what an agent wallet may not do — I
+could not confirm that it cannot withdraw. *Not verified.*
+
+**F3 — Line 24 and lines 172-174 promise something the document's own source rules out.**
+"without leaving Discord". Line 56 of the same document records that `ApproveBuilderFee`
+"is signed by the user's **main wallet**". Stage 2 found it, stage 4 wrote the press release
+as if it had not. The press release convinced the decider (line 182) partly on a promise
+that cannot be kept, which makes that "yes" worth less than it looks.
+
+**F4 — Line 116, "majority resident in the EU", is not an answer to line 76.** MiFID II
+authorisation is granted by a member state; the analysis at lines 58-59 draws on ESMA and on
+**French** sources for a country the document never names. Nothing can be asked of a lawyer
+until one country is named. And "majority" concedes a minority who are not EU — some of whom
+may be Restricted Persons under line 60. Line 76 called this "the most decision-changing
+question open" and stage 3 closed it with a word that does not close it.
+
+**F5 — Lines 112-114 put the regulated act on the unpaid party.** The administrator curates
+"explicitly to filter out scammers" and "takes no share of the commission". Line 58 records
+that ESMA's expectations cover "the qualifications of the traders being copied" — the
+selecting is the act. Stage 3's regulatory paragraph (lines 123-127) reasons only about the
+operator: "the commission, the product and the relationship with the member are the
+decider's". True, and beside the point. The person choosing the traders is the administrator,
+for free, and nobody has told them. This is simultaneously the viability risk and the reason
+success signal 3 (line 141) will come back negative.
+
+**F6 — Lines 137-142: not one success signal can be run before the money is spent.** All four
+begin at install. A discovery whose only tests require the product to exist has not tested
+the idea; it has scheduled a post-mortem. Section 5.2 above proposes four tests that all run
+without code. If the decider keeps only one thing from this section, keep that.
+
+**F7 — Line 189 (adopted), lines 196-198 (not adopted) and line 203 (adopted) cannot all
+hold.** No-go 2 forbids past performance as a sales argument. No-go 3, which would have
+forbidden a leaderboard, was declined. Voting is in v1. Members voting on traders will vote
+on the only evidence they have, which is performance, posted by the traders themselves in
+the channel where no-go 2 cannot be enforced. Stage 4 describes this tension at lines 205-213
+and then files it as an open question (line 217). It is not an open question. It is a
+contradiction between an adopted no-go and an adopted scope change, and one of them has to
+go before a charter can be written.
+
+**F8 — Line 62 is the most decision-relevant row in stage 2 and the worst-sourced.** The
+administrator's real alternative — paid signal subscriptions at "$30-300+ per month" — is
+marked "Review sites only — *excerpt*, no primary source found". If that row is right, the
+administrator earns more from the status quo than flet's entire commission pool and has a
+positive reason not to install. Everything downstream of "the administrator will do this for
+nothing" depends on a figure nobody sourced.
+
+**F9 — Line 133, keeping all four signals, is not a decision.** Stage 3 says so itself at
+lines 144-146 and moves on. The playbook requires each round to end with a decision; an
+unranked set of four post-hoc signals, none of which is a stopping condition, is the absence
+of one. Line 220 re-asks the question. It should have been answered before stage 4 was
+written.
+
+**F10 — Lines 129-131 and line 203: scope grew while feasibility was unknown.** Budget and
+time "were not established in this round", and in the same round member voting was pulled
+into v1 against the framer's advice. Adding scope before the budget is known is how the
+feasibility risk becomes unmeasurable rather than merely unmeasured.
+
+**F11 — Line 57 sizes the competitor with the wrong number.** "reported 50k+ monthly users"
+is an *excerpt* from a members-only post. A readable figure exists and it is far more
+decision-changing: DefiLlama reports pvp.trade's trailing-30-day revenue at **$14,899**.
+Stage 2 measured the competitor's popularity when the question was whether the business
+model pays.
+
+**F12 — Lines 117-120 answer the decider's question in the decider's place.** Line 41 asks
+"Who holds the members' funds and their keys while the copying runs?" — stage 1's own first
+open question. Stage 3 closes it with "*Assumption stated by the framer, not contradicted by
+the decider*". The playbook is explicit: when the decider cannot answer, write the question
+down and go on — "never answer it in their place". Silence is not confirmation, and per F2
+this is the question the product turns on.
+
+### 5.5 Open items — questions the challenger would have asked
+
+Not answerable from here; they are objections until the decider answers them.
+
+1. **Which single country do most members live in?** Nothing can be asked of a lawyer, and
+   no legal finding in this document can be applied, until this is one word.
+2. **How many members does the server have, and how many of them trade Hyperliquid today?**
+   The viability arithmetic is one multiplication and this is its only missing input.
+3. **Who holds the agent-wallet key — flet, or the member?** See F2.
+4. **What is the budget, and by when?** (Line 129, still open, and now with added scope.)
+5. **Has anyone told the administrator that selecting the traders may be a regulated act
+   they perform for free, and that promoting flet to their members may be separately
+   restricted?** Would they still install it?
+6. **Does voting replace the administrator's curation or sit under it?** Seconding line 217 —
+   with the addition that under F7 the answer also decides no-go 2.
+7. **Which signal, negative, stops the project?** Seconding line 220.
+
+### 5.6 The challenger's verdict on the value hypothesis
+
+Stated plainly, because the playbook forbids blunting it.
+
+**The hypothesis at lines 154-161 cannot survive as written.** Its second sentence — the 10k
+USDC vault fee as the reason a trader needs flet — is false as a differentiator (F1), and
+the clause should be struck. Its operating premise — that the administrator will do the
+curation for nothing (line 114) — is the assumption most likely to fail, and it fails harder
+once anyone explains the exposure to them (F5, counter-evidence on promotion). And the
+architecture that would deliver it appears to be forbidden by the product's own first no-go
+(F2).
+
+**The core claim underneath it can survive, and is worth testing.** That a member copies
+because someone they know vouched, rather than because a ranking said so, is a real
+hypothesis, it is not obviously wrong, and — unlike everything else in this document — it
+can be refuted in fourteen days for the price of one Discord message and no code (5.2,
+value). Nothing in the counter-evidence disproves it. What the counter-evidence disproves is
+the *business* around it: the venue caps the take at 0.1%, competitors already charge half
+that, and the nearest comparable with 50k+ claimed monthly users made $14,899 last month.
+
+**Recommendation — the decider's call, not the challenger's:** not a go. The four tests in
+5.2 cost roughly one week of somebody's attention plus one legal bill, and three of the four
+can refute the project before a line of code is written. Run the legal scoping (viability B)
+and the link test (value) first, and in that order, since the link test performs the act the
+legal test sizes.
 
 ## 6. Decision
 
-<go · clarify · kill; the reasons; for a go, why each objection does not block it, and what
-the first cycle carries: spikes, no-gos.>
+### Round 1 — **clarify**, 2026-09-20, by @napkinstack-admin
+
+The challenge was presented unchanged and the decider chose **clarify**: no charter, no
+module, no code until the round-2 questions are answered and the cheap tests have run.
+
+**The reasons.**
+
+- **F2 is the question the product turns on, and it was answerable for free.** Rather than
+  decide around it, the decider asked for it to be settled on the venue's own documentation
+  first. That research is in section 2, "Round 2", and it changes the shape of the question:
+  the non-custodial architecture exists, so what remains is a reading of no-go 1, not an
+  architectural impossibility.
+- **The four tests in 5.2 cost about a week and one legal bill, and three of them can refute
+  the project before a line of code exists.** Against that, a go would have spent a build to
+  learn the same thing later. The playbook calls the cheap outcome the cheapest for a reason.
+- **Two inputs that everything else waits on are still missing**: one named country, without
+  which no legal question can even be asked, and the member count, without which the
+  viability arithmetic has no operand.
+- **The decider did not accept the challenger's premise that the idea is dead.** The core
+  claim — a member copies because someone they know vouched — was not refuted by anything in
+  section 5.3, and the link test can settle it in fourteen days.
+
+**What round 2 carries.**
+
+1. The testnet check on agent-wallet permissions (section 2, round 2) — one hour, converts
+   the load-bearing claim to primary.
+2. The reading of no-go 1: "no custody of funds", or "no key of any kind". The answer decides
+   whether there is an automated product at all.
+3. One named member state; the server's member count and how many trade Hyperliquid today;
+   the budget and the deadline.
+4. The legal scoping opinion (5.2, viability B), started **before** the link test, since the
+   link test performs the act the opinion must qualify.
+5. The link test (5.2, value), and the thresholds the decider sets on all four tests.
+
+Still open and unanswered from round 1: whether voting replaces or sits under the
+administrator's curation (F7 makes this also decide no-go 2), and which signal, coming back
+negative, stops the project.
+
+---
+
+### Round 2 — the decider's answers, 2026-09-20
+
+**1. Version B: automated copying, accepted.** flet holds **one agent key per member** — a
+second key, registered by the member's own main wallet, able to place and cancel orders on
+that member's account and nothing else, revocable by the member at any time and able to
+carry an expiry. The **traders' side needs no key at all**: their positions are public
+on-chain, and flet reads their address.
+
+- **No-go 1 is reworded by the decider** to *never hold a member's funds or a member's main
+  key*. The round-1 wording ("funds or private keys", section 4) stands above as adopted and
+  is superseded here, not deleted.
+- **The testnet check was made blocking by the decider, and the evidence has since moved.**
+  The empirical run is blocked: the faucet requires a prior mainnet deposit from the same
+  address (*primary*), so a throwaway address cannot be funded without spending real money.
+  In its place, the payload analysis in section 2 establishes structurally, from primary
+  documentation, that a withdrawal or transfer signed by an agent key debits that agent's own
+  address — the action format has no field for acting on behalf of the account that
+  authorised it. **Whether that satisfies the blocking condition is the decider's to say.**
+  Two narrower questions remain open there: whether an agent may register another agent, and
+  whether the two internal-transfer actions accept an agent signature.
+- **What this does not change:** an agent key cannot *take* a member's money but can *lose*
+  it. Pre-mortem item 10 stands, and it is now a design constraint rather than a worry:
+  position sizing, a leverage ceiling and a kill switch belong to the first cycle, not later.
+
+**2. France is the launch country.** The legal scoping (5.2, viability B) is on French law
+and must cover **both parties** — the operator and the administrator who curates — plus the
+separate question of whether the administrator's announcement post is restricted promotion of
+an unregistered service. The decider foresees extending abroad; that is **re-asked country by
+country**, since nothing found for France transposes automatically. F4 is closed for round 2
+only.
+
+**3. Voting sits under the administrator, who keeps a veto.** Members propose and vote; the
+administrator validates or refuses. The vouching stays theirs, so the value hypothesis
+survives, and F7's contradiction is resolved in favour of no-go 2 — **on paper only**:
+members will still argue from displayed performance in the channel, where no-go 2 cannot be
+enforced. Recorded as a residual, not as closed. Unchanged either way: the administrator
+still performs the act ESMA's briefing points at, and still takes no share of the commission
+(F5).
+
+**Still open after this pass:** the server's member count and how many of them trade
+Hyperliquid today; the budget and the deadline; the thresholds on all four tests; and which
+signal, coming back negative, stops the project.
