@@ -1394,11 +1394,11 @@ Kill condition: **fewer than 20 members still copying at day 30, by 31 December.
 
 This closes the input that stayed open through round 1, round 2 and both challenges.
 
-> **One caveat the framer must record.** These figures reproduce, word for word, the
-> *illustrative example* the framer wrote when asking the question. They may well be the
-> decider's real numbers — but the framer invented them first, and this document has already
-> been burned once by a framer's assumption travelling as a measurement (the turnover band).
-> **Flagged for the decider's confirmation**; every threshold below inherits it.
+> **Checked, because the figures reproduce word for word the illustrative example the framer
+> wrote when asking the question.** The framer put the question back to the decider rather
+> than inherit its own invention as a threshold — this document had already been burned once
+> by a framer's assumption travelling as a measurement. **The decider confirms the figures
+> are their own.** They are a fact of the project.
 
 **What the threshold is worth, tested against the measured economics.** Twenty members
 copying, at the turnovers measured in section 2:
@@ -1427,3 +1427,30 @@ detail.
 alone cannot fail in the way that matters. Pairing it with a revenue figure — *"…and at least
 X € collected in the month"* — is what would make 31 December a real date rather than a
 counting exercise.
+
+**The decider keeps the member count alone, 2026-09-21.** Offered a revenue condition
+alongside it — 500 €/month, or the 1,000 € of PDR-0001 — the decider declines both: the first
+proof sought is **use, not revenue**. If people copy and stay, the rest is negotiated
+afterwards.
+
+Recorded, and written as it is rather than as it sounds: **31 December therefore decides
+interest, not viability.** Twenty members still copying at day 30 proves that the vouching
+works — which is the one claim two challenges failed to refute and the whole reason the
+project is still open. It proves nothing about whether flet can be funded, and the arithmetic
+above says it will not be: at the measured turnover the same twenty members produce between
+41 € and 671 € a month. A second decision, on a second date, will have to answer the money
+question, and this one does not pretend to.
+
+**Consequence for PDR-0001, and the framer's proposal.** Its success criterion — 20 members,
+5 communities, over 1,000 € in a month — is now unreachable as written and no longer aligned
+with the decider's own stopping rule. The framer proposes restating it so that it tests what
+the PDR is actually about, which is whether a flat commission on routed volume can fund
+anything at all, without borrowing a member count from a rule that deliberately has no revenue
+in it:
+
+> *We will consider this was the right call if the commission collected in a single calendar
+> month exceeds 500 €, observed before 2027-03-21.*
+
+At the measured 5.10× turnover that needs about 98,000 € of member capital under copy — 20
+members at 4,900 €, or 65 at 1,500 €. Reachable, and still meaningful. **Awaiting the
+decider's word before the PDR is amended.**
