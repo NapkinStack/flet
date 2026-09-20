@@ -121,6 +121,132 @@ And a distinction the sources make that the product must not blur: an agent key 
 take** the member's money, but it **can lose** it. Liquidating a leveraged position is not a
 withdrawal. Pre-mortem item 10 survives this finding intact.
 
+### Round 2 — the feasibility shadow run, actually run
+
+Test **5.2 — feasibility** was run on 2026-09-20, read-only, no keys, no orders, no money.
+It is the only one of the four tests that needed nobody else.
+
+**Method, so it can be repeated.** Hyperliquid's public leaderboard
+(`stats-data.hyperliquid.xyz/Mainnet/leaderboard`) was filtered to accounts between 20k and
+400k USDC with more than 2M USDC of 30-day volume and a positive month — the size a
+community trader plausibly has. Three were taken. Their last 2,000 fills came from
+`api.hyperliquid.xyz/info` (`userFills`), cut to the **last 3 days** so the three are
+compared on equal ground. Entry slippage was measured against 1-minute candles
+(`candleSnapshot`): for each fill where the trader **took** liquidity, the adverse move
+between their fill price and the close of the minute containing it — a proxy for a copier
+reacting within the same minute, and no finer than one minute. Fees are **not modelled**:
+they are the `fee` field of the trader's own fills, scaled to the copier's account.
+
+**The slippage is fine. That is not where this breaks.**
+
+| Trader | Fills / day | Median slippage | p90 | Over the proposed 15 bps threshold |
+|---|---|---|---|---|
+| `0x102d1d1a…` | 522 | **+0.0 bps** | +5.8 | 0% |
+| `0x7c36139b…` | 443 | −0.4 bps | +23.1 | 15% |
+| `0xe7795fce…` | 5 | −6.1 bps | −5.4 | 0% |
+
+The threshold the challenger proposed — *median entry slippage above 15 bps* — **is not
+breached by any of the three**. On this criterion the test passes. It measured the wrong
+thing, and that is itself the finding: three other constraints decide feasibility, and none
+of them was in the test as designed.
+
+**What actually breaks it.**
+
+| Finding | Measurement | What it means |
+|---|---|---|
+| **Half to two-thirds of the fills are not copyable at all.** | Liquidity *posted*, not taken: 0%, **54.1%**, **60.0%** of the three traders' fills. | A resting limit order is filled when the market comes to it. A copier reacting *after* that fill cannot reproduce it — the price has already traded there. They take liquidity at a worse price, or post and may never fill. For two of three traders, most of the strategy is structurally out of reach. |
+| **Most orders are too small to place once scaled down.** | Hyperliquid's floor is **10 USDC of notional**, confirmed empirically: **the smallest of 2,912 observed fills is 10.10 USDC, and not one is below 10**. For a 500 USDC member, **38%, 85% and 87%** of the three traders' orders fall under it. | Copying a 316k account with 500 USDC means a scale of 0.0016. Most orders become dust the venue refuses. The product has a **minimum member ticket**, and it is not a few hundred USDC. |
+| **The fees destroy the account before the strategy can help it.** | Copying trader `0x102d…` costs a member **28.5% of their account in 3 days — 285% a month** — whatever their account size, since it scales. Trader `0x7c36…`: 28.8% a month. | That trader turns their account over 72 times a day. A copier turns theirs over 72 times a day too, and pays on every turn. No edge survives this. |
+| **flet's own commission is the larger half of that burden.** | On trader `0x102d…`, over 3 days: platform fees **33.21 USDC**, flet's builder fee **109.18 USDC**. The trader's own realised fee rate is **0.0304%** of notional; the cap flet may take is **0.1%** — **3.3× what the venue itself charges**. | The idea says "a small commission". At the cap it is not small: it is the dominant cost the member pays, and more than three times the exchange's. |
+
+**The minimum member ticket, per trader, to be able to place…**
+
+| Trader | 50% of their orders | 80% | 95% |
+|---|---|---|---|
+| `0x102d1d1a…` | 340 USDC | **4,896** | 42,953 |
+| `0x7c36139b…` | 2,414 USDC | **6,013** | 16,376 |
+| `0xe7795fce…` | 2,753 USDC | **51,367** | 245,792 |
+
+**Corrected the same day: the three traders were unrepresentative, and the correction
+reverses the conclusion.** They were picked by 30-day ROI, which selects scalpers. Screening
+the **whole** leaderboard instead — 13,536 accounts above 5k USDC active over 30 days — the
+median monthly turnover is **8.4×** the account, which costs a copier **1.2% a month** in
+total fees, not 285%. **68.6%** of active accounts stay under a 5%-a-month fee burden, and
+**7,635** of them also closed the month positive. *The fee problem is a selection problem,
+not a structural one.*
+
+**The 10 USDC floor, however, survives the correction — and yields the product's real
+constraint.** Sampling 14 traders from the copyable-and-winning population: the ticket a
+member needs to place 80% of a trader's orders has a **median of 6,583 USDC**; none of the
+14 is reachable with 1,000 USDC and two with 2,000. The rule behind it, measured across the
+sample: **a member needs roughly one twentieth of the trader's account**, the ratio ranging
+from 8 to 80. So the administrator's list must be matched to the members' wallets, not only
+to the members' trust.
+
+**Supply exists at every size**, once the rule is applied — copyable, winning traders whose
+account is at most 20× the member's ticket:
+
+| Member ticket | Trader accounts in range | Copyable **and** winning |
+|---|---|---|
+| 500 € | 5k–10k | 210 |
+| 1,000 € | 5k–20k | 557 |
+| 2,000 € | 5k–40k | 966 |
+| 5,000 € | 5k–100k | 1,666 |
+
+### Round 2 — the revenue forecast, on minimal stated assumptions
+
+Requested by the decider in the absence of the real figures. **Every input below is an
+assumption of the framer, not a measurement**, except the turnover band and the fee cap,
+which are measured above. Revenue = copiers × ticket × monthly turnover × 0.1%.
+
+| Scenario | Members | Trade perps | Adopt | Active copiers | Ticket | Turnover | **Revenue / month** |
+|---|---|---|---|---|---|---|---|
+| Minimal | 150 | 8% | 25% | 3 | 1,000 € | 10× | **30 €** |
+| Base | 400 | 12% | 35% | 17 | 1,500 € | 15× | **378 €** |
+| High | 1,000 | 15% | 40% | 60 | 2,500 € | 25× | **3,750 €** |
+
+**What 2,000 €/month from a single community would require:** 200 simultaneous active
+copiers at 1,000 € and 10× turnover; or 67 at 2,000 € and 15×; or 27 at 3,000 € and 25×.
+
+**Cross-check against the one measured comparable.** pvp.trade — same venue, same
+builder-code rail, 50,000+ monthly users claimed — earned **$14,899** in its last 30 days
+(section 5.3, read from DefiLlama). The high scenario for *one* community is a quarter of
+that. The base scenario is 2.5% of it.
+
+**What the forecast says, plainly.** One community does not pay for a build. The base case
+covers a subscription, not an engineer. The product is therefore either a **multi-community
+play** — which multiplies the regulatory exposure of section 5.3 and needs not one unpaid
+Karim but dozens — or it needs a different take than 0.1% of notional. Worth noting for that
+second branch, from section 2 round 1: the venue's **vault** rail natively supports a **10%
+profit share**, which pays only when the member gains, and is a different promise to make.
+
+None of this is a recommendation. It is the arithmetic the decider asked for, on assumptions
+the decider has not yet replaced with facts.
+
+---
+
+**Honest limits of this run.** Three traders, three days, chosen from the top of a public
+leaderboard — not a sample of the traders an administrator would actually vouch for, and
+selected for recent success. The slippage proxy has one-minute resolution. The fee figures
+are **optimistic**: they scale the *leader's* fee tier onto a small copier, who would sit in
+a worse tier. And proportional copying is assumed; copying at a fixed size, or only
+replicating position changes above a threshold, would dodge the 10 USDC floor — at the cost
+of no longer running the leader's strategy.
+
+**What it changes for the product**, stated as questions the round must now answer rather
+than as conclusions:
+
+1. **Is there a minimum member ticket, and is it above what a community member will risk?**
+   The numbers say the ticket is in the thousands, not the hundreds.
+2. **Must the authorised traders be selected for being copyable** — low frequency, taker
+   fills, large orders — and not only for being trustworthy? That is a new criterion on
+   Karim's list, and it is technical, not social.
+3. **Is 0.1% the right take, when it is 3.3× the venue's own fee?** The cap is a maximum,
+   not a rate. Lowering it eases the member's burden and shrinks a revenue that the
+   counter-evidence already found thin.
+
+---
+
 **The empirical confirmation is blocked, and the structural finding largely replaces it.**
 
 The plan was: register an agent wallet on testnet, attempt `withdraw3` and `usdSend` with it,
@@ -616,3 +742,116 @@ still performs the act ESMA's briefing points at, and still takes no share of th
 **Still open after this pass:** the server's member count and how many of them trade
 Hyperliquid today; the budget and the deadline; the thresholds on all four tests; and which
 signal, coming back negative, stops the project.
+
+---
+
+### Round 2 — the decider corrects the framing, 2026-09-21
+
+**flet is a multi-community, multi-channel product, and was meant to be from the start.**
+The bot is installable on **any** Discord server or Telegram channel, and administered by
+the admin of that server or channel. Karim's server was an example, never the product.
+
+*How the framing narrowed.* The idea file says "permettant à **une** communauté de proposer
+du copy trading à ses membres" — which reads as *any* community, generically. The framer's
+stage-1 restatement turned it into *the* community's existing channel, the decider confirmed
+that restatement, and every stage-3 question after it asked about *the* administrator and
+*the* members' country. The narrowing is the framer's, and it propagated into the legal
+work. It is corrected here rather than rewritten above.
+
+**What it changes.**
+
+**1. The economics become plausible for the first time.** Per-community figures from the
+forecast above, multiplied by the number of **active** communities:
+
+| Active communities | Minimal | Base | High |
+|---|---|---|---|
+| 1 | 30 € | 382 € | 3,750 € |
+| 5 | 150 € | 1,912 € | 18,750 € |
+| 20 | 600 € | 7,650 € | 75,000 € |
+| 50 | 1,500 € | 19,125 € | 187,500 € |
+
+To reach 2,000 €/month: 5 communities in the base case, 67 in the minimal one. To reach the
+$14,899 that pvp.trade earned last month: 39 base-case communities.
+
+**The load-bearing and untested assumption is the long tail.** Those tables count *active*
+communities, not installations. The normal shape of a self-serve product is that most
+servers install it and never produce a single active copier. Nothing here estimates that
+ratio, and it decides everything: at a 10% activation rate, 39 active communities means 390
+installations.
+
+**2. The legal question changes shape, and `legal-scoping-request.md` as written on
+2026-09-20 is wrong.** It asks whether *the operator* may serve *one French community*. The
+real question is whether an unauthorised operator may run an **open platform** that any
+administrator installs, serving members in **uncontrolled jurisdictions**, on perpetual
+futures. Three things follow that the first version never raised: the members' countries are
+no longer knowable in advance; Hyperliquid's Restricted Persons clause becomes something
+**flet must enforce** rather than something it can assume about one server; and the admins
+are no longer one identified volunteer but an open set the operator neither selects nor
+controls. The request is rewritten in the same commit as this entry.
+
+**3. Telegram re-enters the scope.** Stage 3 fixed on Discord because that is where the
+example community lives. The product needs both channels: two integrations, two platform
+policy regimes, and the Discord Developer Policy question of section 5.3 now has a Telegram
+twin that nobody has looked at.
+
+**4. Flaw F5 multiplies.** Not one unpaid curator performing the act ESMA's briefing points
+at, but one per community — an open set the operator does not choose. And flet becomes
+responsible, in fact if not in law, for what those administrators list.
+
+**5. A surface the discovery has never addressed: self-serve installation.** An
+administrator who lists themselves as a copyable trader; a server created to farm the
+product; a curated list that is a scam by design. Karim's trustworthiness was an assumption
+the whole product rested on, and it does not generalise to strangers.
+
+**6. The comparable stops being approximate.** pvp.trade is precisely a multi-group Telegram
+product on the same venue with the same fee rail. Its measured $14,899 over 30 days is now
+the direct read of what this category currently pays, not a distant analogy.
+
+**What this does not change:** the minimum member ticket and the trader-selection rule
+(section 2), both of which apply per member and per trader regardless of how many
+communities exist.
+
+### Round 2 — the revenue model is settled, 2026-09-21
+
+**No profit share.** The decider rules it out. flet is paid a flat commission on the notional
+it routes, capped by the venue at 0.1%, and never takes a share of a member's gains.
+
+This closes the third question the feasibility run put to the decider, and it closes more
+than a pricing choice: the only native way to take a profit share on this venue is the
+**vault** rail, which pools members' capital. Ruling out the profit share therefore also
+rules out vaults and settles the architecture — the member keeps their funds, flet holds a
+revocable agent key, and the venue pays flet on routed volume. Every mention of the vault
+rail in sections 2 and 5 is now background, not an option.
+
+Recorded as **PDR-0001**, with its prior art, the trade-off owned — a member who loses still
+pays — its acceptance criteria, a success criterion dated 2027-03-21 and a removal condition
+that points at question 8 of the legal scoping request.
+
+**Consequence the decider should hold in view:** the revenue model is now fixed *and* capped
+by somebody else. flet cannot raise its take; it can only lower it. Everything therefore
+rests on the number of **active** communities, which is the untested long-tail assumption
+recorded above.
+
+### Round 2 — first legal signal, 2026-09-21
+
+**The decider reports that the lawyer "seems favourable".** Recorded for what it is, and no
+more: a **preliminary verbal impression relayed by the decider**, not the written opinion
+that test 5.2 (viability B) asks for, and not attributed to any of the eight questions. No
+document was received. *Assumption, not finding.*
+
+**What it does not do.** The threshold the challenger set, and the decider did not replace,
+is explicit: *any "authorisation required" for either party, that cannot be structured around
+inside the budget, is a kill and not a clarify*. A favourable impression does not clear that
+threshold, because the threshold is about **which** party and **which** question. Favourable
+on Q1 — the operator, who selects no trader — while reserved on Q4 — the territoriality of an
+open platform whose members' countries are unknown — describes a different product from the
+reverse.
+
+**What it does do.** The challenger's ordering constraint is satisfied: the legal work had to
+start **before or alongside** the value test, never after. It has started. **The link test
+(5.2, value) is no longer blocked** and is the cheapest remaining test of the one claim
+nothing has yet refuted.
+
+**Still owed before this section can be marked as an answer:** the written opinion, and the
+lawyer's position question by question — at minimum Q1 (the operator), Q2 (the administrators,
+and our responsibility for them), and Q4 (territoriality).

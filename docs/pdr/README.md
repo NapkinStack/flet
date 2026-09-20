@@ -24,3 +24,4 @@ The PDR describes **what the product must do and why**, never its implementation
 
 | No. | Title | Status | Criterion to check on |
 |---|---|---|---|
+| [0001](./0001-charge-on-routed-volume-never-on-the-member-s-gains.md) | Charge a flat commission on routed volume, never a share of the member's gains | Accepted | 2027-03-21 |
