@@ -132,3 +132,60 @@ latest** — and every week earlier is a week of margin.
 - **The agent** reads the posted addresses on the venue's public API at D14 and D30, computes
   the rates and the P&L, and writes the result into `discovery.md` — with the measurement
   method next to each figure, as everything else in that document carries it.
+
+---
+
+# The private variant — chosen by the decider, 2026-09-21
+
+The decider prefers not to post in the server. Recorded, with what it costs.
+
+## What changes, and what must not
+
+**Karim invites five members privately, and we count who acts.** Not "would you copy a trader I
+vouched for?" — a stated intention is close to worthless, and five stated intentions are worth
+less. He sends the same three vouched traders and the same link to an existing tool, in a direct
+message, to **five members he judges most likely to be interested**, and we count how many
+**actually start**.
+
+Everything else holds: flet is never named, no performance is quoted, the count comes from the
+public addresses of those who start, and the P&L is read beside the retention.
+
+## What this test can and cannot do
+
+**It can refute. It cannot confirm.** The sample is five, and Karim chooses it for likelihood of
+interest — the most favourable conditions the project will ever get. So:
+
+- **Refuted if none of the five starts within 14 days.** If the five members most likely to
+  want this, invited personally by someone they trust, with a working tool one click away, all
+  decline — the claim that vouching moves people is dead, and it died cheaply.
+- **Not confirmed by any result.** Three of five starting would move the claim from *untested*
+  to *not refuted under the best available conditions*. That is genuinely worth having, and it
+  is not evidence that a stranger's server behaves the same way.
+
+The charter's first success criterion — twenty members still copying at day 30, on 2026-12-31 —
+is **not** measured by this and is unchanged. This is a refutation gate placed in front of it,
+not a substitute for it.
+
+## What Karim sends
+
+> Je t'écris en direct parce que je sais que tu suis @trader1, @trader2 et @trader3 dans le
+> serveur. J'ai vérifié qu'ils tradent bien leur propre argent, et je me porte garant de qui
+> ils sont — pas de ce qu'ils vont gagner.
+>
+> Si tu veux en suivre un, ça se fait avec un outil qui existe déjà, sans que personne d'autre
+> ne touche à tes fonds : `<lien>`
+>
+> Si tu te lances, dis-le-moi et donne-moi ton adresse publique — elle est déjà visible de tous
+> sur la chaîne. Ça me permet de voir ce que ça donne pour toi dans un mois et de te le dire
+> honnêtement.
+
+## What is recorded
+
+| Measure | How | Grade |
+|---|---|---|
+| The five invited, and **why Karim chose them** | His own words, recorded at D0 | fact, and a stated bias |
+| How many started, by D14 | Their public addresses, read on the venue | fact, verifiable |
+| Still copying at D30, and each one's P&L | The same addresses | fact, verifiable |
+| Anyone who declined, and what they said | Karim's report | **declarative** — it carries that grade |
+
+**D0 is the day the five messages are sent.** D30 must land before 2026-12-31.
