@@ -39,9 +39,14 @@ _CHUNK_LOAD = 2
 #: Capped so that one near-empty chunk cannot overshoot into a range needing many reads.
 _MAX_GROWTH = 16
 
-#: What one chunk may spend before its span is judged wrong rather than the trader busy. A
-#: chunk aimed at half a page should take one read; three covers a rate that tripled between
-#: one chunk and the next.
+#: What one chunk may spend before its span is judged wrong rather than the trader busy.
+#:
+#: A verifier measured this cap discarding 11,900 already-paid-for fills on a live trader and
+#: blamed the number. The number was not at fault. Raising it to six or ten changed nothing;
+#: what cost that window was the absence of `too_big` below, so the walk grew straight back
+#: into the ground it had just been cut out of. With that memory in place, three reaches the
+#: same 2.96 days as the head it replaces, with a hundred more fills and no back-offs at all
+#: against four.
 _CHUNK_READS = 3
 
 #: How hard an overshooting chunk is cut before the same ground is tried again. Harder than
@@ -206,6 +211,11 @@ def fills_since(
     covered_from = now
     budget = MAX_PAGES
     end = now
+    #: The smallest span already known to overshoot. Without it the cut and the growth fight
+    #: each other: a cut chunk succeeds, the next one comes back near-empty, growth puts it
+    #: straight back into the same dense ground, and the walk oscillates. A verifier measured
+    #: three full cut-grow-overshoot cycles over one day, 14 of 20 reads wasted.
+    too_big: int | None = None
 
     while end >= asked_from and budget > 0:
         start = max(asked_from, end - chunk_ms + 1)
@@ -228,6 +238,7 @@ def fills_since(
             # trader with quiet ground in front of a dense stretch. Cut the span and try the
             # same ground again instead, while there is budget left to try with.
             if chunk_ms > 1:
+                too_big = chunk_ms if too_big is None else min(too_big, chunk_ms)
                 chunk_ms = max(chunk_ms // _OVERSHOOT_CUT, 1)
                 continue
             break
@@ -235,6 +246,8 @@ def fills_since(
         covered_from = start
         end = start - 1
         chunk_ms = _resize(chunk_ms, len(chunk), spent)
+        if too_big is not None:
+            chunk_ms = min(chunk_ms, max(too_big // _OVERSHOOT_CUT, 1))
 
     return FillWindow(
         tuple(held),
@@ -289,17 +302,21 @@ def _read_range(
             # A whole page inside one millisecond, so there is no boundary to back off to and
             # no way forward that does not drop whatever else the venue holds there.
             raise _Unsteppable(spent)
-        if page[-1].time_ms == page[-2].time_ms:
-            # The page ENDS inside a group of fills sharing one millisecond. Stepping to the
-            # next millisecond would drop the rest of that group, leaving a hole in the middle
-            # of a window reported as contiguous — and every rate drawn across it would be
-            # wrong. Step back to the group's start and read it whole on the next page.
-            boundary = page[-1].time_ms
-            read.extend(f for f in page if f.time_ms < boundary)
-            cursor = boundary
-            continue
-        read.extend(page)
-        cursor = page[-1].time_ms + 1
+        # A full page always stops one fill short of certainty: whatever shares the last
+        # fill's millisecond may continue past the page boundary, and stepping to the next
+        # millisecond would drop it, leaving a hole in a window reported as contiguous.
+        #
+        # So never step over that millisecond — step back to its start and read it whole on
+        # the next page. Testing whether the last TWO fills share it was not enough: a
+        # verifier swept the boundary across a crowded millisecond and found the one
+        # alignment where exactly one member of the group ends the page, which dropped 2499
+        # of 2500 fills and still reported the range as completely read.
+        #
+        # Progress is guaranteed: a full page not wholly inside one millisecond has
+        # `page[0].time_ms < page[-1].time_ms`, so the new cursor is strictly past the old.
+        boundary = page[-1].time_ms
+        read.extend(f for f in page if f.time_ms < boundary)
+        cursor = boundary
     return read, False, spent
 
 

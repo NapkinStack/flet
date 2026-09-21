@@ -15,7 +15,13 @@ from typing import Any
 import httpx
 import pytest
 
-from screening.venue import MAX_PAGES, PAGE_SIZE, VenueUnavailable, fills_since
+from screening.model import Fill
+from screening.venue import (
+    MAX_PAGES,
+    PAGE_SIZE,
+    VenueUnavailable,
+    fills_since,
+)
 
 ADDRESS = "0x0000000000000000000000000000000000000001"
 DAY_MS = 86_400_000
@@ -70,6 +76,17 @@ def rising(quiet_per_day: int, busy_per_day: int, busy_days: int, days: int) -> 
 
 def heavy(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [c for c in calls if c["type"] == "userFillsByTime"]
+
+
+def venue_read_range(
+    client: httpx.Client, start_ms: int, end_ms: int, budget: int = MAX_PAGES
+) -> tuple[list[Fill], bool, int]:
+    """One range, read to its end. Private in the module; reached here because one defect
+    lives at the page boundary and arranging that boundary through the chunked walk is a
+    coincidence rather than a test."""
+    from screening.venue import Retry, _read_range, _Waiting
+
+    return _read_range(ADDRESS, start_ms, end_ms, client, _Waiting(Retry()), budget)
 
 
 # --- the cheap path ---------------------------------------------------------------------
@@ -331,3 +348,55 @@ def test_an_overshooting_chunk_is_cut_and_the_same_ground_tried_again() -> None:
     assert window.last_fill_ms is not None
     assert window.last_fill_ms >= NOW_MS - DAY_MS, "and what is held still ends at the run"
     assert len(heavy(calls)) <= MAX_PAGES
+
+
+def test_ground_known_too_dense_is_never_grown_back_into() -> None:
+    """The cut and the growth used to fight each other: a chunk overshoots and is cut, the
+    next one comes back near-empty, growth puts it straight back into the same dense ground.
+    A verifier measured three full cut-grow-overshoot cycles over one day, fourteen of twenty
+    reads wasted, and thirteen times fewer fills held than the implementation before it."""
+    series = sorted(
+        evenly(per_day=300, days=40)
+        + list(range(NOW_MS - 10 * DAY_MS, NOW_MS - 10 * DAY_MS + 60_000, 2))
+    )
+    client, calls = venue(series)
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+
+    assert window.calendar_days >= 9, (
+        "the quiet ground down to the dense day must be read; oscillating over that day "
+        "instead holds about four"
+    )
+    wide = [c for c in heavy(calls) if int(c["endTime"]) - int(c["startTime"]) >= 4 * DAY_MS]
+    assert len(wide) <= 2, (
+        "a span already known to overshoot is not launched at again and again: the "
+        "oscillation ran three full cut-grow-overshoot cycles over the same day"
+    )
+
+
+def test_a_page_ending_on_one_member_of_a_crowded_millisecond_leaves_no_hole() -> None:
+    """The alignment a verifier found by sweeping the page boundary across a crowded
+    millisecond: when exactly ONE member of the group is the page's last fill, the previous
+    guard — which compared the last two fills — did not fire, the cursor stepped past, and
+    2499 of 2500 fills were dropped while the range still reported itself completely read.
+
+    Read at the level the defect lives at, because arranging that alignment through the
+    chunked walk is a coincidence rather than a test."""
+    clump_at = NOW_MS - 5 * DAY_MS
+    before = [clump_at - (PAGE_SIZE - i) for i in range(PAGE_SIZE - 1)]
+    series = sorted(before + [clump_at] * 2500 + [clump_at + 1000])
+    client, _ = venue(series)
+
+    from screening.venue import _Unsteppable
+
+    try:
+        read, whole, _ = venue_read_range(client, series[0], NOW_MS)
+    except _Unsteppable:
+        return  # it stopped rather than stepping over: nothing was dropped silently
+
+    held_at_clump = sum(1 for f in read if f.time_ms == clump_at)
+    assert held_at_clump in (0, 2500), (
+        f"all of the crowded millisecond or none of it, never {held_at_clump} of 2500 — "
+        "the alignment that dropped 2499 reported the range as completely read"
+    )
+    if whole:
+        assert len(read) == len(series), "a range reported as read whole must hold all of it"
