@@ -109,6 +109,27 @@ Candidates for the next framing, in the order the discovery makes them urgent:
   count falls back to self-declaration and drops a grade if they will not.
 - The written legal opinion, still pending, and the decision to launch without it — neither
   bears on this cycle, which touches no money.
+- **Found by running D3 against the live venue, 2026-09-21.** Two real traders come back
+  `COPYABLE` while costing the member **14.31%** and **5.64%** of their ticket per month in
+  fees. The acceptance criteria are met — the cost is stated and not hidden — but the one-word
+  headline still reads as approval. An independent verifier raised the same thing from the
+  other side: `copyable` rests on **one** of the four measurements, so a trader can be
+  `COPYABLE` with 70% of their fills unreproducible. **Not changed in this cycle**: it moves an
+  accepted acceptance criterion, which is the decider's to do.
+- **Also found by running it:** the public leaderboard and the live account state disagree.
+  Several leaderboard accounts now hold nothing, and the command correctly returns no verdict
+  for them. The module reads the live state, which is the right source; the leaderboard is a
+  snapshot, and the discovery's figures inherit that.
+- **Raised by the verifier, and both are real.** The fee burden is computed on the trader's
+  **whole** volume, including the fills a copier cannot reproduce — so it errs *pessimistic* on
+  fees inside the same verdict that says that volume is unreachable, while the fee *tier* errs
+  optimistic. Two unbounded biases in opposite directions. And the cycle says "5% of their
+  **capital**" where the code computes a share of the **ticket**; they coincide only when the
+  ticket is the member's whole allocation. **Words to settle before the command states them to
+  an administrator.**
+- **`days_observed` is unbounded.** Monthly figures are extrapolated by x30/days from the span
+  between the first and last fill. A trader whose fills all land inside a few hours yields a
+  very large extrapolation, and no scenario bounds it. Raised by the verifier.
 
 ## Closure
 
