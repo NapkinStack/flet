@@ -1544,10 +1544,24 @@ installs**. 220 €/month on a shared server that is already paid for is a small
 product, not a failure. What remains true, unchanged: it does not repay three months of the
 decider's half-time work quickly, and a decision about *that* is still owed on a later date.
 
-**The Discord verification is now quantified, and it is the highest-return action available.**
-Capped at 100 servers the ceiling is **1,102 €/month**; at 400 installs it is **4,406 €**. The
-verification is therefore worth about **3,300 €/month** — for a form. It is fifteen minutes
-against every other number in this document.
+**The Discord verification is quantified — and the framer's advice about *when* to do it was
+wrong.** Capped at 100 servers the ceiling is **1,102 €/month**; at 400 installs it is
+**4,406 €**, so the verification is worth about **3,300 €/month**. But it is **not fifteen
+minutes tonight**: an app becomes *eligible* at **75 servers** — Discord sends the link then —
+and verification is *required* past **100**. Below 75 there is nothing to submit.
+
+The gate therefore **does not bind before the decider's deadline**: the stopping rule needs
+about 30 installs and the wall is at 75. What is real work, and is on the critical path the
+day the gate opens: verification requires a **live and accurate privacy policy and terms of
+service**, identity verification, and a written justification of each privileged intent. For a
+product that routes financial orders those two documents are not a formality, and they
+intersect the legal question.
+
+**A design constraint that follows, and it must be taken now rather than later:** an app driven
+by **slash commands**, which does not read message content, needs no privileged intent, and its
+verification is materially lighter. *Sources: Discord's own support pages could not be read —
+three sessions, 403 and 404 — so the 75/100 thresholds and the intent rules are* **excerpt**
+*and must be confirmed by someone who can open the developer portal.*
 
 **And a constraint that has never been read.** The 100-server figure is still *excerpt*: three
 sessions have now failed on Discord's own pages. Telegram may or may not have an equivalent
