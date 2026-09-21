@@ -1,6 +1,6 @@
 ---
 goal: "Find out whether vouching moves anyone, and make the screening answer one an administrator can act on"
-status: proposed
+status: accepted
 appetite_weeks: 3
 start: 2026-09-21
 end: 2026-10-12
