@@ -52,6 +52,13 @@ class Verdict:
     trader_account: Decimal
     fills_read: int
     days_observed: Decimal
+    calendar_days: int
+    """Whole days the window covers. `days_traded` is counted against this so the two cannot
+    contradict each other — `traded on 18 of the 17 days read` was printed before they did."""
+    days_traded: int
+    """Calendar days on which the trader actually traded. A month's volume in one burst is
+    not a month of trading, and the monthly figures below average over the window either
+    way — which understates what the next month would cost."""
     refused_share: Decimal
     """Share of the trader's orders that would fall under the venue's floor at this ticket."""
     unreproducible_share: Decimal
@@ -62,4 +69,60 @@ class Verdict:
     """What copying costs the member per month, as a share of their ticket."""
     minimum_ticket: Decimal
     """The ticket needed to place COVERAGE_TARGET of this trader's orders."""
+    window_complete: bool
+    """False when the venue's page cap stopped the read short of the window asked for, so the
+    monthly figures above are extrapolated from less than that window."""
     reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class FillWindow:
+    """What was actually read, and whether it is the window that was asked for.
+
+    The venue returns at most a page of fills per call, so without this the observation window
+    is whatever the cap happened to cover — and every monthly figure derived from it is an
+    artefact of that cap rather than of the trader.
+
+    **It always ends at the moment of the run.** The read walks backwards from now, so a
+    window cut short by the read budget is missing its oldest days, never its newest: a
+    trader who stopped a fortnight ago cannot read as current.
+    """
+
+    fills: tuple[Fill, ...]
+    days_requested: Decimal
+    complete: bool
+    starts_at_ms: int
+    ends_at_ms: int
+    waits: int = 0
+    """How many times the read backed off. A retry that succeeds hides a degradation unless
+    it is counted (`operations.md` E4)."""
+
+    reads: int = 0
+    """How many heavy reads the venue was asked for. The venue meters by weight, so a figure
+    the operator cannot see is a cost nobody is watching."""
+
+    @property
+    def first_fill_ms(self) -> int | None:
+        """The oldest fill actually held. `starts_at_ms` is what was *asked for*, and the two
+        diverge the moment a read is cut short — which is where every defect on this branch
+        has lived."""
+        return min((f.time_ms for f in self.fills), default=None)
+
+    @property
+    def last_fill_ms(self) -> int | None:
+        return max((f.time_ms for f in self.fills), default=None)
+
+    @property
+    def calendar_days(self) -> int:
+        """Whole days the fills it holds actually span. Never the range it requested."""
+        if self.first_fill_ms is None or self.last_fill_ms is None:
+            return 0
+        return -(-(self.last_fill_ms - self.first_fill_ms) // 86_400_000)
+
+    @property
+    def days_covered(self) -> Decimal:
+        """The span of the fills actually read. Zero when there are fewer than two."""
+        if len(self.fills) < 2:
+            return Decimal(0)
+        span = max(f.time_ms for f in self.fills) - min(f.time_ms for f in self.fills)
+        return Decimal(span) / Decimal(86_400_000)

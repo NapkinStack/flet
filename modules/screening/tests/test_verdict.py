@@ -14,6 +14,7 @@ DAY_MS = 86_400_000
 
 
 def fill(notional: str, *, took_liquidity: bool = True, day: int = 0) -> Fill:
+    """A fill of `notional`, stamped on `day` of the window."""
     return Fill(
         coin="BTC",
         price=Decimal(notional),
@@ -94,3 +95,68 @@ def test_it_refuses_to_answer_without_fills() -> None:
     """No verdict from partial data (AGENTS.md)."""
     with pytest.raises(ValueError):
         assess([], trader_account=Decimal(20_000), ticket=Decimal(2_000))
+
+
+def test_it_marks_a_monthly_figure_extrapolated_from_an_incomplete_window() -> None:
+    """When the venue's page cap stopped us short, the monthly figure is an extrapolation and
+    the answer must say so rather than present it as a measurement."""
+    trader = spread([fill("10000")] * 10, days=3)
+    v = assess(trader, trader_account=Decimal(10_000), ticket=Decimal(2_000), window_complete=False)
+    assert v.window_complete is False
+    assert any("extrapolat" in r.lower() for r in v.reasons), (
+        "an extrapolated figure must be named as one"
+    )
+
+
+def test_it_counts_the_days_the_trader_actually_traded() -> None:
+    """A month's volume in one burst is not a month of trading, and the difference is what
+    decides whether the monthly cost above means anything about tomorrow."""
+    burst = [fill("10000", day=0) for _ in range(20)]
+    v = assess(
+        [*burst, fill("10000", day=29)],
+        trader_account=Decimal(100_000),
+        ticket=Decimal(5_000),
+    )
+    assert v.days_traded == 2, "two calendar days carried the whole window"
+
+
+def test_it_says_when_a_month_of_volume_landed_in_a_handful_of_days() -> None:
+    """The figure is right about the past and understates the future. Say so, with the factor."""
+    burst = [fill("50000", day=0) for _ in range(30)]
+    v = assess(
+        burst, trader_account=Decimal(100_000), ticket=Decimal(5_000), window_days=Decimal(30)
+    )
+    assert v.days_traded == 1
+    joined = " ".join(v.reasons).lower()
+    assert "1 of the 30" in joined or "1 day" in joined, "the concentration must be stated"
+    assert "understate" in joined, "and named as an understatement, since it runs toward yes"
+
+
+def test_it_does_not_cry_concentration_for_a_trader_spread_across_the_month() -> None:
+    spread_out = [fill("10000", day=d) for d in range(0, 30)]
+    v = assess(
+        spread_out, trader_account=Decimal(100_000), ticket=Decimal(5_000), window_days=Decimal(30)
+    )
+    assert v.days_traded == 30
+    assert not any("understate" in r.lower() for r in v.reasons)
+
+
+def test_days_traded_never_exceeds_the_days_it_is_counted_against() -> None:
+    """`traded on 18 of the 17 days read` is an impossible sentence, and it was printed."""
+    fills = [fill("10000", day=d) for d in range(0, 18)]
+    v = assess(fills, trader_account=Decimal(100_000), ticket=Decimal(5_000))
+    said = " ".join(v.reasons)
+    assert v.days_traded <= v.calendar_days, "a day traded is a day in the window"
+    assert f"{v.days_traded} of the {v.calendar_days}" in said
+
+
+def test_it_always_states_the_concentration_factor_without_a_cliff() -> None:
+    """A threshold on a continuous quantity is a cliff: 10 days of 30 warned, 11 did not, and
+    a 2.7x understatement passed unnamed."""
+    eleven = [fill("10000", day=d) for d in range(0, 11)] + [fill("1", day=29)]
+    v = assess(
+        eleven, trader_account=Decimal(100_000), ticket=Decimal(5_000), window_days=Decimal(30)
+    )
+    assert any("x" in r and "understate" in r.lower() for r in v.reasons), (
+        "the factor is stated for every trader, not only past a threshold"
+    )
