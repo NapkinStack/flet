@@ -41,12 +41,18 @@ _MAX_GROWTH = 16
 
 #: What one chunk may spend before its span is judged wrong rather than the trader busy.
 #:
-#: A verifier measured this cap discarding 11,900 already-paid-for fills on a live trader and
-#: blamed the number. The number was not at fault. Raising it to six or ten changed nothing;
-#: what cost that window was the absence of `too_big` below, so the walk grew straight back
-#: into the ground it had just been cut out of. With that memory in place, three reaches the
-#: same 2.96 days as the head it replaces, with a hundred more fills and no back-offs at all
-#: against four.
+#: **This constant is a trade, and both sides of it are measured.** Three wins the shapes
+#: where dense ground sits behind quiet ground — `wall 200k @6d` holds 6.0 days against 4.0
+#: at ten, and a trader with one enormous day a fortnight back keeps 13k fills against 1k.
+#: Ten wins a dense trader with a recent burst: at two pinned timestamps on the live address
+#: this module is tested against, three held 1.56 and 2.06 days where ten held 3.12 and
+#: reached the read it replaces.
+#:
+#: Three is chosen because its advantage is systematic across several shapes while ten's is
+#: intermittent — at a third pinned timestamp on that same address the two are identical to
+#: four decimals. That is a judgement on a mixed table, not an optimum, and an earlier
+#: version of this comment claimed the trade did not exist. It does. See
+#: `docs/adr/0003-size-the-read-from-one-probe-and-accept-the-trade.md`.
 _CHUNK_READS = 3
 
 #: How hard an overshooting chunk is cut before the same ground is tried again. Harder than
