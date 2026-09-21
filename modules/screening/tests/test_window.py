@@ -362,9 +362,11 @@ def test_ground_known_too_dense_is_never_grown_back_into() -> None:
     client, calls = venue(series)
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
 
-    assert window.calendar_days >= 9, (
-        "the quiet ground down to the dense day must be read; oscillating over that day "
-        "instead holds about four"
+    assert window.days_covered >= Decimal("9.5"), (
+        "the quiet ground down to the dense day must be read. Measured: 10.00 days with the "
+        "memory, 8.74 without it. Asserted on `days_covered` and not on `calendar_days`, "
+        "which rounds up — 8.74 becomes 9 there, and this assertion passed against the very "
+        "commit it was written to fail against"
     )
     wide = [c for c in heavy(calls) if int(c["endTime"]) - int(c["startTime"]) >= 4 * DAY_MS]
     assert len(wide) <= 2, (
