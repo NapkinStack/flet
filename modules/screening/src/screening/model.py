@@ -24,10 +24,6 @@ COVERAGE_TARGET = Decimal("0.80")
 #: Above this monthly cost, the fee burden is called out rather than merely stated.
 FEE_BURDEN_ALERT = Decimal("0.05")
 
-#: Below this share of the window's days, a trader's volume is concentrated enough that a
-#: monthly average says little about what the next month would cost.
-CONCENTRATION_ALERT = Decimal("0.34")
-
 
 @dataclass(frozen=True)
 class Fill:
@@ -56,6 +52,9 @@ class Verdict:
     trader_account: Decimal
     fills_read: int
     days_observed: Decimal
+    calendar_days: int
+    """Whole days the window covers. `days_traded` is counted against this so the two cannot
+    contradict each other — `traded on 18 of the 17 days read` was printed before they did."""
     days_traded: int
     """Calendar days on which the trader actually traded. A month's volume in one burst is
     not a month of trading, and the monthly figures below average over the window either
@@ -88,6 +87,18 @@ class FillWindow:
     fills: tuple[Fill, ...]
     days_requested: Decimal
     complete: bool
+    starts_at_ms: int
+    ends_at_ms: int
+    waits: int = 0
+    """How many times the read backed off. A retry that succeeds hides a degradation unless
+    it is counted (`operations.md` E4)."""
+    """The window actually read. When the read is cut short this is a **recent** window, not
+    the stale front of the one asked for — a trader who stopped a fortnight ago must not read
+    as current."""
+
+    @property
+    def calendar_days(self) -> int:
+        return -(-(self.ends_at_ms - self.starts_at_ms) // 86_400_000)
 
     @property
     def days_covered(self) -> Decimal:

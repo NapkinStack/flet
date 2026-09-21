@@ -10,7 +10,6 @@ from decimal import Decimal
 
 from screening.model import (
     BUILDER_FEE_RATE,
-    CONCENTRATION_ALERT,
     COVERAGE_TARGET,
     FEE_BURDEN_ALERT,
     MINIMUM_ORDER_USDC,
@@ -55,7 +54,9 @@ def assess(
         raise ValueError("the fills span no time: a monthly turnover cannot be computed from them")
 
     count = Decimal(len(fills))
-    days_traded = len({f.time_ms // int(_MS_PER_DAY) for f in fills})
+    buckets = {f.time_ms // int(_MS_PER_DAY) for f in fills}
+    days_traded = len(buckets)
+    calendar_days = int(window_days) if window_days is not None else max(buckets) - min(buckets) + 1
     scale = ticket / trader_account
     notionals = sorted(f.notional for f in fills)
 
@@ -81,6 +82,7 @@ def assess(
         trader_account=trader_account,
         fills_read=len(fills),
         days_observed=days,
+        calendar_days=calendar_days,
         days_traded=days_traded,
         refused_share=refused_share,
         unreproducible_share=unreproducible_share,
@@ -97,6 +99,7 @@ def assess(
             monthly_fee_burden=monthly_fee_burden,
             minimum_ticket=minimum_ticket,
             days=days,
+            calendar_days=calendar_days,
             days_traded=days_traded,
             window_complete=window_complete,
         ),
@@ -113,6 +116,7 @@ def _reasons(
     monthly_fee_burden: Decimal,
     minimum_ticket: Decimal,
     days: Decimal,
+    calendar_days: int,
     days_traded: int,
     window_complete: bool,
 ) -> tuple[str, ...]:
@@ -147,13 +151,15 @@ def _reasons(
             f"will decide this member's result"
         )
 
-    said.append(f"traded on {days_traded} of the {days:.0f} days read")
-    if days > 0 and Decimal(days_traded) / days <= CONCENTRATION_ALERT:
-        factor = days / Decimal(days_traded)
+    said.append(f"traded on {days_traded} of the {calendar_days} days read")
+    if days_traded < calendar_days:
+        # No threshold. A cliff on a continuous quantity left a 2.9x understatement unnamed
+        # just below it; the factor is arithmetic and is stated for every trader.
+        factor = Decimal(calendar_days) / Decimal(days_traded)
         said.append(
-            f"a month's volume in {days_traded} day(s): the cost above averages it over the "
+            f"that volume landed on {days_traded} day(s): the cost above averages it over the "
             f"whole window, so it understates what the next month costs by about "
-            f"{factor:.0f}x if that rate resumes"
+            f"{factor:.1f}x if that rate resumes"
         )
 
     if not window_complete:

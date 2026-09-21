@@ -149,3 +149,35 @@ Candidates for the next framing, in the order the discovery makes them urgent:
 ## Closure
 
 <Written at the end of the cycle.>
+
+### D3 — what the fourth verification found, and where it was stopped
+
+**Two defects, both fixed here, both in the branch no earlier pass had reached.** The verifier
+got there by changing how it sampled: earlier passes looked at the highest *monthly volume*,
+which finds burst traders; the population that crosses the 40,000-fill bound is the sustained
+market maker, and the cheap signature is one mid-window day that is itself page-capped. Four
+funded addresses crossed on the first attempt. **The bound is a normal Tuesday for a market
+maker, not an exotic case.**
+
+1. **`traded on 18 of the 17 days read`** — an impossible sentence, printed to an
+   administrator. Two numbers on different bases. Now counted against the same base.
+2. **A cut-short read kept the *stalest* part of the window.** Paging ascends, so stopping at
+   the cap discarded the most recent 13 of 30 days and reported the rest as current. A trader
+   who stopped, resized or blew up a fortnight ago was invisible. The read now retries over a
+   **recent** window sized to what the first pass got through, and the command states the
+   **dates** it read — complete or not.
+3. **The concentration threshold was a cliff.** 0.34 warned at 10 days of 30 and not at 11,
+   leaving a 2.7× understatement unnamed. The constant is gone; the factor is arithmetic and is
+   stated for every trader.
+
+**Where this stops, and why it stops rather than continues.** Up to 40 heavy reads per
+invocation trip the venue's rate limiter. A retry with exponential backoff, jitter, a maximum
+count and a total budget is in place (`operations.md`), and the command now **says** it was
+throttled instead of hanging or inventing an answer — but on the over-bound traders it still
+returns `no verdict`. Measured: 25 rapid *light* calls pass untouched, so the limiter is
+**weight-based**, and a 2,000-row page is what costs. The fix is pacing, not retrying.
+
+**It is not written, deliberately.** This session's own bursts have left the limiter hot, so a
+pacing change could not be observed here — and writing code that cannot be verified is the one
+thing four verification passes have made indefensible. Recorded as an operational gap with its
+measurement, for a batch that can watch it work.

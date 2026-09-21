@@ -9,6 +9,7 @@ import httpx
 import pytest
 
 from screening.cli import main
+from screening.venue import Retry
 
 ADDRESS = "0x102d1d1a6240581a809bac9b9b4dff2eafe8c058"
 DAY_MS = 86_400_000
@@ -52,7 +53,9 @@ def test_it_returns_no_verdict_when_the_venue_is_unreachable(
         raise httpx.ConnectError("no route to host")
 
     code = main(
-        [ADDRESS, "--ticket", "2000"], client=httpx.Client(transport=httpx.MockTransport(down))
+        [ADDRESS, "--ticket", "2000"],
+        client=httpx.Client(transport=httpx.MockTransport(down)),
+        retry=Retry(attempts=1),
     )
     captured = capsys.readouterr()
     assert code == 2, "unreachable is not the same answer as not copyable"
