@@ -1,11 +1,11 @@
 ---
-status: proposed
+status: accepted
 decider: "@napkinstack-admin"
 ---
 
 # PDR-0002 — Three verdicts, not two
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-21
 - **Decision makers**: @napkinstack-admin, who delegated product decisions of this kind to the
   framer on 2026-09-21; recorded here rather than left in the conversation
@@ -119,8 +119,8 @@ applies, so the headline alone is actionable.
 - **The floor fails and a reservation would also apply** — `NOT COPYABLE` wins. Impossible
   beats expensive, and the reservations are still printed so the administrator learns why the
   trader is unsuitable twice over.
-- **The window was cut short** — unchanged: the figures are named as extrapolated, and the
-  reservation thresholds are applied to them as they stand.
+- **The window was cut short** — see the amendment below. The figures are named as
+  extrapolated, and how far they were stretched is itself a reservation.
 
 **Business rules:**
 
@@ -188,3 +188,60 @@ measurements rather than in the verdict.
 - **Support and documentation**: the module's `README.md` states the four verdicts and their
   exit codes. An exit code is an interface and is documented as one.
 - **Data**: no change. The same four measurements, from the same public reads.
+
+
+---
+
+## Amendment, 2026-09-21 — a fourth reservation, and a ceiling
+
+**Decided by the framer**, under the delegation recorded above, while implementing this PDR.
+
+### What changed
+
+This PDR originally said a cut-short window changes nothing: name the figures as extrapolated
+and apply the thresholds as they stand. Running the command against the live venue showed that
+is not enough.
+
+A 30-day question answered from **2.4 hours** of fills is stretched to a month by a factor of
+**319**. Every downstream figure — turnover, fee burden, flet's revenue share — carries that
+factor. The answer said `extrapolated`, truthfully, and then printed
+`125.34% of their ticket per month in fees` as though it were a measurement. An administrator
+cannot act on that, and the middle verdict was not warning them about it.
+
+So:
+
+- **Extrapolation is the fourth reservation**, alongside fees, reproducibility and
+  concentration. It applies when the window asked for was stretched by more than **3×** — that
+  is, when less than ten days of a thirty-day question were actually read.
+- **Past 30×**, there is no verdict at all. A single day of fills stretched to a month is not
+  a weak answer, it is a guess with the shape of a measurement, and the module's own rule is
+  that a verdict without a usable measurement is not an answer.
+
+### Why these two numbers
+
+3× is where a month's question starts resting on a week. 30× is a single day. Neither is
+sacred, and both are one set of numbers for every administrator and every community, as the
+business rules above require.
+
+Sampled live on 2026-09-21: a trader whose thirty days fit is stretched by 1× and trips
+nothing; the densest trader in the test set reads about 2 days and is stretched by ~15, which
+is a reservation; the 2.4-hour case is refused.
+
+### What it does not change
+
+The floor still decides `NOT COPYABLE` alone. A reservation is still never a refusal. The
+ceiling is not a reservation that got stricter — it is the `NO VERDICT` case this PDR already
+defined as *"the data cannot support an answer"*, given a threshold so that it can be applied
+rather than argued about.
+
+### Success criterion
+
+By **2026-12-31**, no administrator has been shown a monthly figure stretched by more than
+30×, and the share of real traders refused by the ceiling is under 5% of the ones screened.
+Above that, the ceiling is screening out traders rather than protecting anyone, and the read —
+not the verdict — is what needs fixing (`modules/screening/docs/adr/0003`).
+
+### Removal condition
+
+If the read ever covers the window it asks for reliably, the extrapolation reservation and the
+ceiling both become dead code and are removed rather than left as reassurance.

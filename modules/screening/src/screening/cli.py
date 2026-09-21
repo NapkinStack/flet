@@ -14,15 +14,19 @@ from decimal import Decimal, InvalidOperation
 import httpx
 
 from screening import venue
-from screening.model import FillWindow, Verdict
+from screening.model import FillWindow, Ruling, Verdict
 from screening.verdict import assess
 
 #: The window the command asks the venue for. Thirty days is what a monthly figure means.
 WINDOW_DAYS = 30
 
+#: Ordered by severity (PDR-0002). The renumbering is a breaking change to this command's
+#: interface, made before anything consumes it: a script keeping the idiom it already has —
+#: `if code == 0` — stops getting a zero for a trader the command was warning it about.
 EXIT_COPYABLE = 0
-EXIT_NOT_COPYABLE = 1
-EXIT_NO_VERDICT = 2
+EXIT_WITH_RESERVATIONS = 1
+EXIT_NOT_COPYABLE = 2
+EXIT_NO_VERDICT = 3
 
 
 def _date(ms: int) -> str:
@@ -46,8 +50,20 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+_EXIT = {
+    Ruling.COPYABLE: EXIT_COPYABLE,
+    Ruling.WITH_RESERVATIONS: EXIT_WITH_RESERVATIONS,
+    Ruling.NOT_COPYABLE: EXIT_NOT_COPYABLE,
+}
+
+
 def _render(address: str, verdict: Verdict, window: FillWindow) -> str:
-    head = "COPYABLE" if verdict.copyable else "NOT COPYABLE"
+    head = str(verdict.ruling)
+    if verdict.reservations:
+        # Named in the headline, so the first line alone is actionable. A middle verdict that
+        # does not say what it is reserving about would be read as noise, and it will be the
+        # common one.
+        head += f" ({', '.join(verdict.reservations)})"
     # The dates of the fills actually held, never the range that was requested.
     held_from = _date(window.first_fill_ms) if window.first_fill_ms is not None else "?"
     held_to = _date(window.last_fill_ms) if window.last_fill_ms is not None else "?"
@@ -107,13 +123,14 @@ def main(
             ticket=ticket,
             window_days=window.days_requested if window.complete else None,
             window_complete=window.complete,
+            window_asked_days=window.days_requested,
         )
     except ValueError as error:
         print(f"no verdict: {error}", file=sys.stderr)
         return EXIT_NO_VERDICT
 
     print(_render(args.address, verdict, window))
-    return EXIT_COPYABLE if verdict.copyable else EXIT_NOT_COPYABLE
+    return _EXIT[verdict.ruling]
 
 
 if __name__ == "__main__":  # pragma: no cover

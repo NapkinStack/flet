@@ -3,12 +3,15 @@ acceptance criteria (01-is-a-trader-copyable.md)."""
 
 from __future__ import annotations
 
+import time
 from decimal import Decimal
 
 import pytest
 
-from screening.model import Fill, Verdict
+from screening.model import FEE_BURDEN_ALERT, Fill, Ruling, Verdict
 from screening.verdict import assess
+
+NOW_MS = int(time.time() * 1000)
 
 DAY_MS = 86_400_000
 
@@ -160,3 +163,105 @@ def test_it_always_states_the_concentration_factor_without_a_cliff() -> None:
     assert any("x" in r and "understate" in r.lower() for r in v.reasons), (
         "the factor is stated for every trader, not only past a threshold"
     )
+
+
+# --- PDR-0002: three verdicts, not two ------------------------------------------------
+
+
+def _fills(n: int, px: str = "1000", crossed: bool = True, day_span: int = 30) -> list[Fill]:
+    """`n` fills spread evenly over `day_span` days, ending now."""
+    step = max((day_span * 86_400_000) // max(n - 1, 1), 1)
+    return [
+        Fill(
+            coin="BTC",
+            price=Decimal(px),
+            size=Decimal(1),
+            time_ms=NOW_MS - (n - 1 - i) * step,
+            took_liquidity=crossed,
+        )
+        for i in range(n)
+    ]
+
+
+def test_a_trader_who_clears_the_floor_and_trips_nothing_is_simply_copyable() -> None:
+    v = assess(
+        _fills(60), trader_account=Decimal(100_000), ticket=Decimal(50_000), window_days=Decimal(30)
+    )
+    assert v.ruling is Ruling.COPYABLE
+    assert v.reservations == ()
+
+
+def test_a_fee_burden_above_the_alert_is_a_reservation_not_a_refusal() -> None:
+    """The defect PDR-0002 exists for: live, the command printed COPYABLE and exited 0
+    directly above a line saying the fees would decide the member's result."""
+    v = assess(
+        _fills(4000),
+        trader_account=Decimal(100_000),
+        ticket=Decimal(50_000),
+        window_days=Decimal(30),
+    )
+    assert v.monthly_fee_burden > FEE_BURDEN_ALERT
+    assert v.ruling is Ruling.WITH_RESERVATIONS
+    assert "fees" in v.reservations
+    assert v.copyable is True, "a reservation is expensive, never impossible"
+
+
+def test_more_than_half_the_fills_posted_is_a_reproducibility_reservation() -> None:
+    fills = _fills(30, crossed=True) + _fills(40, crossed=False)
+    v = assess(
+        fills, trader_account=Decimal(100_000), ticket=Decimal(50_000), window_days=Decimal(30)
+    )
+    assert v.ruling is Ruling.WITH_RESERVATIONS
+    assert "reproducibility" in v.reservations
+
+
+def test_volume_on_a_third_of_the_days_or_fewer_is_a_concentration_reservation() -> None:
+    v = assess(
+        _fills(60, day_span=3),
+        trader_account=Decimal(100_000),
+        ticket=Decimal(50_000),
+        window_days=Decimal(30),
+    )
+    assert v.days_traded <= 10
+    assert v.ruling is Ruling.WITH_RESERVATIONS
+    assert "concentration" in v.reservations
+
+
+def test_the_floor_beats_every_reservation() -> None:
+    """Impossible beats expensive: a trader whose orders cannot be placed is NOT COPYABLE
+    whatever else is true, and the reservations are still printed below."""
+    v = assess(
+        _fills(4000),
+        trader_account=Decimal(100_000),
+        ticket=Decimal(100),
+        window_days=Decimal(30),
+    )
+    assert v.refused_share > Decimal("0.2")
+    assert v.ruling is Ruling.NOT_COPYABLE
+    assert v.copyable is False
+    assert v.reservations, "still named, so the administrator learns it twice over"
+
+
+def test_a_window_stretched_past_the_ceiling_is_no_verdict_at_all() -> None:
+    """A read of 2.4 hours extrapolated to a month by 319 has the shape of a measurement and
+    the content of a guess. Past the ceiling the command refuses rather than answering."""
+    with pytest.raises(ValueError, match="guess, not a figure"):
+        assess(
+            _fills(60, day_span=0),
+            trader_account=Decimal(100_000),
+            ticket=Decimal(50_000),
+            window_days=Decimal(30),
+            window_complete=False,
+        )
+
+
+def test_a_window_stretched_past_the_alert_is_only_a_reservation() -> None:
+    v = assess(
+        _fills(60, day_span=5),
+        trader_account=Decimal(100_000),
+        ticket=Decimal(50_000),
+        window_days=Decimal(30),
+        window_complete=False,
+    )
+    assert "extrapolation" in v.reservations
+    assert v.ruling is Ruling.WITH_RESERVATIONS, "short is a caveat, absurd is no verdict"

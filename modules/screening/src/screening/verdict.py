@@ -10,11 +10,16 @@ from decimal import Decimal
 
 from screening.model import (
     BUILDER_FEE_RATE,
+    CONCENTRATION_ALERT,
     COVERAGE_TARGET,
+    EXTRAPOLATION_ALERT,
+    EXTRAPOLATION_CEILING,
     FEE_BURDEN_ALERT,
     MINIMUM_ORDER_USDC,
+    UNREPRODUCIBLE_ALERT,
     VENUE_TAKER_FEE_RATE,
     Fill,
+    Ruling,
     Verdict,
 )
 
@@ -29,6 +34,7 @@ def assess(
     *,
     window_days: Decimal | None = None,
     window_complete: bool = True,
+    window_asked_days: Decimal | None = None,
 ) -> Verdict:
     """Can a member holding `ticket` copy this trader, and at what cost?
 
@@ -55,8 +61,12 @@ def assess(
 
     count = Decimal(len(fills))
     buckets = {f.time_ms // int(_MS_PER_DAY) for f in fills}
+    # UTC day buckets, so a window exactly `window_days` long can straddle one bucket more
+    # than it has days — which printed `traded on 31 of the 30 days read` to an administrator.
+    # S10 pinned this on the path where the window is inferred; this is the other path.
     days_traded = len(buckets)
     calendar_days = int(window_days) if window_days is not None else max(buckets) - min(buckets) + 1
+    days_traded = min(days_traded, calendar_days)
     scale = ticket / trader_account
     notionals = sorted(f.notional for f in fills)
 
@@ -76,8 +86,34 @@ def assess(
 
     copyable = refused_share <= Decimal(1) - COVERAGE_TARGET
 
+    # A cut-short window is stretched to a month. Past a point that stops being a measurement:
+    # live, a read of 2.4 hours was extrapolated by 319 while seventeen of twenty reads went
+    # unused. The command may not dress a guess as an answer (PDR-0002, amended 2026-09-21).
+    asked = window_asked_days if window_asked_days is not None else days
+    stretch = (asked / span) if (not window_complete and span > 0) else Decimal(1)
+    if stretch > EXTRAPOLATION_CEILING:
+        raise ValueError(
+            f"the venue returned {span:.2f} days of a {asked:.0f}-day window: stretching "
+            f"that to a month multiplies it by {stretch:.0f}, which is a guess, not a figure"
+        )
+
+    reservations = _reservations(
+        monthly_fee_burden=monthly_fee_burden,
+        unreproducible_share=unreproducible_share,
+        days_traded=days_traded,
+        calendar_days=calendar_days,
+        stretch=stretch,
+    )
+    if not copyable:
+        ruling = Ruling.NOT_COPYABLE
+    elif reservations:
+        ruling = Ruling.WITH_RESERVATIONS
+    else:
+        ruling = Ruling.COPYABLE
+
     return Verdict(
-        copyable=copyable,
+        ruling=ruling,
+        reservations=reservations,
         ticket=ticket,
         trader_account=trader_account,
         fills_read=len(fills),
@@ -104,6 +140,29 @@ def assess(
             window_complete=window_complete,
         ),
     )
+
+
+def _reservations(
+    *,
+    monthly_fee_burden: Decimal,
+    unreproducible_share: Decimal,
+    days_traded: int,
+    calendar_days: int,
+    stretch: Decimal,
+) -> tuple[str, ...]:
+    """The reservations that apply, in the order the PDR fixes: fees, reproducibility,
+    concentration, extrapolation. Each is a specific test with a stated threshold — a vague
+    caution would be read as noise, and the middle verdict is going to be common."""
+    named: list[str] = []
+    if monthly_fee_burden > FEE_BURDEN_ALERT:
+        named.append("fees")
+    if unreproducible_share > UNREPRODUCIBLE_ALERT:
+        named.append("reproducibility")
+    if calendar_days > 0 and Decimal(days_traded) / Decimal(calendar_days) <= CONCENTRATION_ALERT:
+        named.append("concentration")
+    if stretch > EXTRAPOLATION_ALERT:
+        named.append("extrapolation")
+    return tuple(named)
 
 
 def _reasons(
