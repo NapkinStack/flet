@@ -111,6 +111,33 @@ def test_a_cut_short_read_keeps_the_recent_end_not_the_stale_one() -> None:
 def test_it_reports_the_dates_it_read_so_a_truncated_answer_can_be_judged() -> None:
     client, _ = paging_client([[row(NOW_MS - 10 * DAY_MS), row(NOW_MS - 2 * DAY_MS)]])
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert window.starts_at_ms == NOW_MS - 30 * DAY_MS
+    assert window.starts_at_ms == NOW_MS - 30 * DAY_MS, "what it asked for"
     assert window.ends_at_ms == NOW_MS
-    assert window.calendar_days >= 30, "the window asked for, in whole days"
+    assert window.calendar_days == 8, "and, separately, what it holds — the two are not the same"
+
+
+def test_it_reports_the_fills_it_holds_not_the_range_it_asked_for() -> None:
+    """Every defect on this branch has been the same one: a number derived from what was
+    ASKED FOR, printed as a fact about what was READ. The window carries the timestamps it
+    actually holds, so the two cannot be confused again."""
+    client, _ = paging_client([[row(NOW_MS - 22 * DAY_MS), row(NOW_MS - 9 * DAY_MS)]])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.first_fill_ms == NOW_MS - 22 * DAY_MS
+    assert window.last_fill_ms == NOW_MS - 9 * DAY_MS
+    assert window.calendar_days == 13, "the days it holds, not the 30 it asked for"
+
+
+def test_a_second_pass_that_also_overflows_is_still_incomplete() -> None:
+    """The narrowed window can overflow too. Saying `complete` then is the failure the
+    narrowing was written to prevent, wearing different clothes."""
+    full = [row(NOW_MS - 30 * DAY_MS + i) for i in range(PAGE_SIZE)]
+    client, _ = paging_client([full] * (2 * MAX_PAGES + 4))
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.complete is False, "neither pass reached the end of its range"
+
+
+def test_an_empty_read_has_no_dates_to_report() -> None:
+    client, _ = paging_client([[]])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.first_fill_ms is None
+    assert window.calendar_days == 0

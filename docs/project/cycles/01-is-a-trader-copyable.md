@@ -181,3 +181,34 @@ returns `no verdict`. Measured: 25 rapid *light* calls pass untouched, so the li
 pacing change could not be observed here — and writing code that cannot be verified is the one
 thing four verification passes have made indefensible. Recorded as an operational gap with its
 measurement, for a batch that can watch it work.
+
+### D3 — the fourth verification failed a scenario, and named the family
+
+A session that had never touched this branch ran the ten scenarios. **Nine passed, S8 failed**,
+and it found two more administrator-facing defects alongside.
+
+**S8's failure.** The narrowing written to keep the recent end of a cut-short window **kept the
+stale front a second time**, for a trader dense enough that the narrowed window also overflowed.
+Observed live: 40,000 fills read covering 2026-09-06 to 2026-09-10, printed as
+`2026-09-02 to 2026-09-21`, with the trader's 2,000 fills **of the day of the run** never read.
+The failure was in the exact direction the previous commit was written to prevent.
+
+**And, printed three lines apart in the same answer:** *"the venue could not return the 30 days
+asked for"*, then *"the answer below is complete"*, then *"extrapolated from the 3.9 days
+actually read"*. The word complete was a fixed string that never consulted whether it was true.
+
+**What the verifier saw that matters more than the bug.** All four defects on this branch are
+**the same defect wearing different clothes**: a number derived from what was *asked for*,
+printed as a fact about what was *read*. `days_observed` from a capped page; the concentration
+cliff; the stale front; and the requested bounds rendered as "the dates it read". Each was fixed
+where it surfaced.
+
+**So the family was ended rather than its fourth member.** `FillWindow` now reports the
+timestamps of the fills it actually holds, and the command prints only those. S6 becomes
+self-evidencing, and S8's failure can no longer be expressed — there is no longer a number that
+describes a range nobody read.
+
+**Also recorded, not addressed here:** the retry meets `operations.md`'s green branch except for
+its metric, retrying 429 is a justified deviation that is not recorded as one, and the 60s budget
+is per call where one invocation makes two. Three of D3's five acceptance criteria are covered by
+tests but named by no scenario, so a regression in any of them would leave every scenario green.

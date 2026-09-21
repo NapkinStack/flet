@@ -97,8 +97,22 @@ class FillWindow:
     as current."""
 
     @property
+    def first_fill_ms(self) -> int | None:
+        """The oldest fill actually held. `starts_at_ms` is what was *asked for*, and the two
+        diverge the moment a read is cut short — which is where every defect on this branch
+        has lived."""
+        return min((f.time_ms for f in self.fills), default=None)
+
+    @property
+    def last_fill_ms(self) -> int | None:
+        return max((f.time_ms for f in self.fills), default=None)
+
+    @property
     def calendar_days(self) -> int:
-        return -(-(self.ends_at_ms - self.starts_at_ms) // 86_400_000)
+        """Whole days the fills it holds actually span. Never the range it requested."""
+        if self.first_fill_ms is None or self.last_fill_ms is None:
+            return 0
+        return -(-(self.last_fill_ms - self.first_fill_ms) // 86_400_000)
 
     @property
     def days_covered(self) -> Decimal:

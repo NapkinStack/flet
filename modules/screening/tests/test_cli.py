@@ -61,3 +61,28 @@ def test_it_returns_no_verdict_when_the_venue_is_unreachable(
     assert code == 2, "unreachable is not the same answer as not copyable"
     assert "unavailable" in (captured.out + captured.err).lower()
     assert "copyable" not in captured.out.lower(), "no verdict from partial data"
+
+
+def test_it_never_calls_an_incomplete_answer_complete(capsys: pytest.CaptureFixture[str]) -> None:
+    """`the answer below is complete` was printed three lines after `the venue could not
+    return the 30 days asked for`, to an administrator."""
+    page = [a_fill("2000", day) for day in range(0, 30)]
+    refusals = [True]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        kind = json.loads(request.content)["type"]
+        if not kind.startswith("userFills"):
+            return httpx.Response(200, json={"marginSummary": {"accountValue": "20000"}})
+        if refusals:
+            refusals.pop()
+            return httpx.Response(429, json={"error": "slow down"})
+        return httpx.Response(200, json=page)
+
+    main(
+        [ADDRESS, "--ticket", "2000"],
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        retry=Retry(attempts=3, sleep=lambda _: None),
+    )
+    out = capsys.readouterr().out.lower()
+    assert "slow down 1 time" in out, "the throttling is reported"
+    assert "complete" not in out, "and nothing claims completeness it does not have"
