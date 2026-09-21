@@ -86,15 +86,21 @@ def assess(
 
     copyable = refused_share <= Decimal(1) - COVERAGE_TARGET
 
-    # A cut-short window is stretched to a month. Past a point that stops being a measurement:
-    # live, a read of 2.4 hours was extrapolated by 319 while seventeen of twenty reads went
-    # unused. The command may not dress a guess as an answer (PDR-0002, amended 2026-09-21).
+    # A cut-short window is stretched to a month. Past a point that stops being a
+    # measurement: live, a read of 2.4 hours was extrapolated by 319 while seventeen of
+    # twenty reads went unused. The command may not dress a guess as an answer (PDR-0002,
+    # amended 2026-09-21).
+    #
+    # The floor is checked first and wins. Whether the orders clear 10 USDC is read straight
+    # off the notionals and needs no extrapolation at all, and the PDR says the floor alone
+    # decides NOT COPYABLE. Refusing to answer a question we can answer from the data in hand
+    # would be the ceiling overreaching.
     asked = window_asked_days if window_asked_days is not None else days
     stretch = (asked / span) if (not window_complete and span > 0) else Decimal(1)
-    if stretch > EXTRAPOLATION_CEILING:
+    if copyable and stretch > EXTRAPOLATION_CEILING:
         raise ValueError(
             f"the venue returned {span:.2f} days of a {asked:.0f}-day window: stretching "
-            f"that to a month multiplies it by {stretch:.0f}, which is a guess, not a figure"
+            f"that to a month multiplies it by {stretch:.1f}, which is a guess, not a figure"
         )
 
     reservations = _reservations(

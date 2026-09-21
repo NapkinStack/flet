@@ -227,6 +227,20 @@ Sampled live on 2026-09-21: a trader whose thirty days fit is stretched by 1× a
 nothing; the densest trader in the test set reads about 2 days and is stretched by ~15, which
 is a reservation; the 2.4-hour case is refused.
 
+### Which window's days concentration counts against
+
+Raised in verification, and settled here because the wording above did not settle it.
+`concentration` counts the days traded against **the days actually read**, not the days asked
+for. On a cut-short window those differ: a trader read over 2 days who traded on both shows a
+ratio of 1 and trips nothing, although the month's volume the command reports landed on 2 of
+the 30 days it asked about.
+
+That is deliberate. The reservation is a statement about what was observed, and counting
+against a window that was never read would be the same mistake as the figures this module
+spent a cycle removing — a number derived from what was *asked for*, printed as a fact about
+what was *read*. The `extrapolation` reservation is what warns about the unread part, and on
+every trader sampled so far it fires whenever this one is silenced by a short window.
+
 ### What it does not change
 
 The floor still decides `NOT COPYABLE` alone. A reservation is still never a refusal. The

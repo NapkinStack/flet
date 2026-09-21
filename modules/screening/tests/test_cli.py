@@ -151,3 +151,96 @@ def test_the_headline_names_the_extrapolation_when_the_window_was_cut_short(
     assert "RESERVATIONS" in out or "NOT COPYABLE" in out
     assert "extrapolation" in out, "a window stretched past the alert is named in the headline"
     assert code in (1, 2)
+
+
+def dense_venue(series: list[int], account: str = "20000", px: str = "2000") -> httpx.Client:
+    """A venue holding `series` (ascending fill times), answering as Hyperliquid does."""
+    import bisect
+
+    from screening.venue import PAGE_SIZE
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        if payload["type"] == "clearinghouseState":
+            return httpx.Response(200, json={"marginSummary": {"accountValue": account}})
+        if payload["type"] == "userFills":
+            chosen = series[-PAGE_SIZE:]
+        else:
+            lo = bisect.bisect_left(series, int(payload["startTime"]))
+            hi = bisect.bisect_right(series, int(payload["endTime"]))
+            chosen = series[lo:hi][:PAGE_SIZE]
+        return httpx.Response(
+            200,
+            json=[{"coin": "BTC", "px": px, "sz": "1", "time": t, "crossed": True} for t in chosen],
+        )
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_the_middle_verdict_has_its_own_exit_code(capsys: pytest.CaptureFixture[str]) -> None:
+    """The distinction this whole decision exists to create, and nothing pinned it: setting
+    `EXIT_WITH_RESERVATIONS = 2` — collapsing the middle verdict onto NOT COPYABLE's code —
+    left the entire suite green."""
+    rows = [a_fill("100000", day) for day in range(0, 30)]
+    code = main([ADDRESS, "--ticket", "2000"], client=venue(rows, "20000"))
+    out = capsys.readouterr().out
+
+    assert out.splitlines()[0].startswith("COPYABLE WITH RESERVATIONS")
+    assert code == 1, "the middle verdict is 1: not 0, and above all not 2"
+
+
+def test_the_reservation_is_named_on_the_first_line_not_merely_somewhere(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`the headline alone is actionable` is the point of naming it. Asserting the word
+    appears anywhere in the output proves nothing — the body already says it."""
+    rows = [a_fill("100000", day) for day in range(0, 30)]
+    main([ADDRESS, "--ticket", "2000"], client=venue(rows, "20000"))
+    first = capsys.readouterr().out.splitlines()[0]
+    assert "fees" in first, "the reservation must be on the headline"
+
+
+def test_a_window_stretched_past_the_ceiling_gives_no_verdict_through_the_command(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The ceiling had no CLI test. Its unit test passes `window_days` with
+    `window_complete=False`, a combination `main` never produces — so the production path to
+    the ceiling was unpinned, which is the exact shape of the defect D3 was written to fix."""
+    # Everything inside three hours, far too dense to read inside the budget.
+    series = list(range(NOW_MS - 3 * 3600 * 1000, NOW_MS + 1, 90))
+    code = main([ADDRESS, "--ticket", "2000"], client=dense_venue(series))
+
+    assert capsys.readouterr().out == "", "no verdict means nothing on stdout"
+    assert code == 3, "past the ceiling there is no verdict, not a weak one"
+
+
+def test_the_floor_still_decides_even_when_the_window_is_hopeless(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`the floor alone decides NOT COPYABLE` (PDR-0002). Whether the orders clear 10 USDC is
+    read straight off the notionals and needs no extrapolation, so the ceiling must not
+    pre-empt it."""
+    series = list(range(NOW_MS - 3 * 3600 * 1000, NOW_MS + 1, 90))
+    code = main([ADDRESS, "--ticket", "1"], client=dense_venue(series, account="1000000"))
+
+    assert capsys.readouterr().out.splitlines()[0].startswith("NOT COPYABLE")
+    assert code == 2, "impossible beats unmeasurable, as it beats expensive"
+
+
+def test_a_malformed_command_line_is_no_verdict_not_a_verdict(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """argparse exits 2 on a usage error, and 2 now means NOT COPYABLE. A script reading the
+    code and never seeing a sentence would record `this trader cannot be copied` because of a
+    typo in its own command line."""
+    assert main([ADDRESS]) == 3, "a missing --ticket is no verdict"
+    assert main([ADDRESS, "--ticket", "2000", "--window", "30"]) == 3, "so is a bad flag"
+
+
+def test_a_ticket_that_is_not_a_finite_amount_is_no_verdict() -> None:
+    """`nan` and `Infinity` parse as Decimals. `nan` escaped as an uncaught exception, which
+    Python exits 1 for — and 1 now means COPYABLE WITH RESERVATIONS. A crash must never read
+    as a qualified yes."""
+    rows = [a_fill("2000", day) for day in range(0, 30)]
+    for bad in ("nan", "Infinity", "-Infinity"):
+        assert main([ADDRESS, "--ticket", bad], client=venue(rows, "20000")) == 3, bad

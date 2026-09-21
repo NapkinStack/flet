@@ -97,11 +97,25 @@ def main(
     client: httpx.Client | None = None,
     retry: venue.Retry | None = None,
 ) -> int:
-    args = _parser().parse_args(argv)
+    try:
+        args = _parser().parse_args(argv)
+    except SystemExit as exit_code:
+        # argparse exits 2 on a usage error, and 2 now means NOT COPYABLE. A script that
+        # reads the code and never sees a sentence would record "this trader cannot be
+        # copied" because of a typo in its own command line. A malformed invocation is the
+        # same thing as an unreadable venue: no verdict.
+        if exit_code.code not in (0, None):
+            return EXIT_NO_VERDICT
+        raise
     try:
         ticket = Decimal(args.ticket)
     except InvalidOperation:
         print(f"--ticket: {args.ticket!r} is not a number", file=sys.stderr)
+        return EXIT_NO_VERDICT
+    if not ticket.is_finite():
+        # `nan` and `Infinity` parse as Decimals. Infinity printed a complete verdict headed
+        # `at a Infinity ticket` saying every order clears the floor.
+        print(f"--ticket: {args.ticket!r} is not a finite amount", file=sys.stderr)
         return EXIT_NO_VERDICT
 
     owned = client is None
@@ -125,7 +139,10 @@ def main(
             window_complete=window.complete,
             window_asked_days=window.days_requested,
         )
-    except ValueError as error:
+    except (ValueError, ArithmeticError) as error:
+        # ArithmeticError catches decimal's InvalidOperation: `--ticket nan` used to escape as
+        # an uncaught exception, which Python exits 1 for — and 1 now means COPYABLE WITH
+        # RESERVATIONS. A crash must never read as a qualified yes.
         print(f"no verdict: {error}", file=sys.stderr)
         return EXIT_NO_VERDICT
 

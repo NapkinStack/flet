@@ -8,7 +8,14 @@ from decimal import Decimal
 
 import pytest
 
-from screening.model import FEE_BURDEN_ALERT, Fill, Ruling, Verdict
+from screening.model import (
+    EXTRAPOLATION_ALERT,
+    FEE_BURDEN_ALERT,
+    UNREPRODUCIBLE_ALERT,
+    Fill,
+    Ruling,
+    Verdict,
+)
 from screening.verdict import assess
 
 NOW_MS = int(time.time() * 1000)
@@ -265,3 +272,87 @@ def test_a_window_stretched_past_the_alert_is_only_a_reservation() -> None:
     )
     assert "extrapolation" in v.reservations
     assert v.ruling is Ruling.WITH_RESERVATIONS, "short is a caveat, absurd is no verdict"
+
+
+# --- the thresholds, defended ---------------------------------------------------------
+
+
+def test_each_threshold_falls_on_the_side_the_decision_says() -> None:
+    """A verifier checked all five boundaries by hand, found the code right, and found six
+    mutants flipping `>` to `>=` that the suite let through. The wording is the contract:
+    fees *above* the alert, *more than half* posted, a third *or less* of the days, *more
+    than* 3x stretched."""
+    from screening.verdict import _reservations
+
+    tiny = Decimal("0.0000001")
+    quiet = {
+        "monthly_fee_burden": FEE_BURDEN_ALERT,
+        "unreproducible_share": UNREPRODUCIBLE_ALERT,
+        "days_traded": 11,
+        "calendar_days": 30,
+        "stretch": EXTRAPOLATION_ALERT,
+    }
+    assert _reservations(**quiet) == (), "exactly at every threshold trips nothing"
+
+    assert "fees" in _reservations(**{**quiet, "monthly_fee_burden": FEE_BURDEN_ALERT + tiny})
+    assert "reproducibility" in _reservations(
+        **{**quiet, "unreproducible_share": UNREPRODUCIBLE_ALERT + tiny}
+    )
+    assert "extrapolation" in _reservations(**{**quiet, "stretch": EXTRAPOLATION_ALERT + tiny})
+    # Concentration is the one stated the other way round — `a third OR LESS` — so exactly a
+    # third fires, and one day more does not.
+    assert "concentration" in _reservations(**{**quiet, "days_traded": 10})
+    assert _reservations(**{**quiet, "days_traded": 11}) == ()
+
+
+def test_the_ceiling_is_past_thirty_not_at_it() -> None:
+    """`Past 30x` in the amendment. Exactly a day of a thirty-day window is a reservation;
+    a hair less is no verdict."""
+    day = 86_400_000
+    at = [
+        Fill(coin="BTC", price=Decimal(1000), size=Decimal(1), time_ms=t, took_liquidity=True)
+        for t in (NOW_MS - day, NOW_MS)
+    ]
+    v = assess(
+        at,
+        trader_account=Decimal(100_000),
+        ticket=Decimal(50_000),
+        window_complete=False,
+        window_asked_days=Decimal(30),
+    )
+    assert "extrapolation" in v.reservations
+    assert v.ruling is Ruling.WITH_RESERVATIONS, "exactly 30x is still an answer"
+
+    past = [
+        Fill(coin="BTC", price=Decimal(1000), size=Decimal(1), time_ms=t, took_liquidity=True)
+        for t in (NOW_MS - day + 1, NOW_MS)
+    ]
+    with pytest.raises(ValueError, match="guess, not a figure"):
+        assess(
+            past,
+            trader_account=Decimal(100_000),
+            ticket=Decimal(50_000),
+            window_complete=False,
+            window_asked_days=Decimal(30),
+        )
+
+
+def test_days_traded_is_clamped_to_the_window_it_is_counted_against() -> None:
+    """UTC day buckets: fills every twelve hours across exactly thirty days fall into
+    thirty-one buckets, and the command printed `traded on 31 of the 30 days read`."""
+    half = 43_200_000
+    fills = [
+        Fill(
+            coin="BTC",
+            price=Decimal(1000),
+            size=Decimal(1),
+            time_ms=NOW_MS - i * half,
+            took_liquidity=True,
+        )
+        for i in range(61)
+    ]
+    v = assess(
+        fills, trader_account=Decimal(100_000), ticket=Decimal(50_000), window_days=Decimal(30)
+    )
+    assert v.days_traded <= v.calendar_days, "an impossible sentence, and it was printed"
+    assert f"{v.days_traded} of the {v.calendar_days}" in " ".join(v.reasons)
