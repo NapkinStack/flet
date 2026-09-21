@@ -59,11 +59,13 @@ def test_it_stops_at_the_page_cap_and_says_the_window_is_incomplete() -> None:
     """A trader busy enough to fill every page is exactly the one whose monthly figure
     would otherwise be invented."""
     full = [row(NOW_MS - 30 * DAY_MS + i) for i in range(PAGE_SIZE)]
-    client, asked = paging_client([full] * (MAX_PAGES + 2))
+    client, asked = paging_client([full] * (2 * MAX_PAGES + 4))
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert len(asked) == MAX_PAGES, "it must not page forever"
+    # Two passes at most: the window asked for, then a recent window sized to what that got
+    # through. Neither pages forever.
+    assert len(asked) <= 2 * MAX_PAGES, "it must not page forever"
     assert window.complete is False, "an incomplete window must say so"
-    assert len(window.fills) == PAGE_SIZE * MAX_PAGES
+    assert len(window.fills) == PAGE_SIZE * MAX_PAGES, "what it kept is one full pass"
 
 
 def test_it_reports_the_window_it_actually_covered() -> None:
@@ -79,3 +81,36 @@ def test_it_says_so_when_a_page_cannot_be_read() -> None:
 
     with pytest.raises(VenueUnavailable):
         fills_since(ADDRESS, days=30, client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_a_cut_short_read_keeps_the_recent_end_not_the_stale_one() -> None:
+    """Paging ascends from the start of a range, so stopping at the cap keeps the OLDEST part
+    and throws away the newest. For "can my members copy this trader?", the half worth keeping
+    is the recent one — a trader who stopped a fortnight ago must not read as current."""
+    calls: list[tuple[int, int]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        start, end = int(payload["startTime"]), int(payload["endTime"])
+        calls.append((start, end))
+        span = end - start
+        # the trader fills a page every half-day, so a 30-day window cannot fit
+        if span > 10 * DAY_MS:
+            return httpx.Response(200, json=[row(start + i) for i in range(PAGE_SIZE)])
+        return httpx.Response(200, json=[row(start), row(end - 1)])
+
+    window = fills_since(
+        ADDRESS, days=30, client=httpx.Client(transport=httpx.MockTransport(handler)), now_ms=NOW_MS
+    )
+    assert window.complete is False, "30 days did not fit and the answer must say so"
+    assert window.ends_at_ms == NOW_MS, "the window kept must end now, not a fortnight ago"
+    assert window.starts_at_ms > NOW_MS - 30 * DAY_MS, "it is a shorter, recent window"
+    assert calls[-1][1] == NOW_MS, "the last read must reach up to now"
+
+
+def test_it_reports_the_dates_it_read_so_a_truncated_answer_can_be_judged() -> None:
+    client, _ = paging_client([[row(NOW_MS - 10 * DAY_MS), row(NOW_MS - 2 * DAY_MS)]])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.starts_at_ms == NOW_MS - 30 * DAY_MS
+    assert window.ends_at_ms == NOW_MS
+    assert window.calendar_days >= 30, "the window asked for, in whole days"

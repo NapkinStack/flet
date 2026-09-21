@@ -8,9 +8,12 @@ from decimal import Decimal
 import httpx
 import pytest
 
-from screening.venue import VenueUnavailable, account_value, fills
+from screening.venue import Retry, VenueUnavailable, account_value, fills
 
 ADDRESS = "0x0000000000000000000000000000000000000001"
+
+#: These tests assert what happens when a read fails, not how long it waits first.
+NO_WAITING = Retry(attempts=1)
 
 
 def client_returning(payload: object, status: int = 200) -> httpx.Client:
@@ -45,14 +48,14 @@ def test_it_reads_the_account_value() -> None:
 def test_it_says_so_when_the_venue_is_unreachable() -> None:
     """No verdict from stale or partial data — it says so and returns nothing."""
     with pytest.raises(VenueUnavailable):
-        fills(ADDRESS, client_that_fails())
+        fills(ADDRESS, client_that_fails(), retry=NO_WAITING)
     with pytest.raises(VenueUnavailable):
-        account_value(ADDRESS, client_that_fails())
+        account_value(ADDRESS, client_that_fails(), retry=NO_WAITING)
 
 
 def test_it_says_so_when_the_venue_answers_with_an_error() -> None:
     with pytest.raises(VenueUnavailable):
-        fills(ADDRESS, client_returning({"error": "nope"}, status=500))
+        fills(ADDRESS, client_returning({"error": "nope"}, status=500), retry=NO_WAITING)
 
 
 def test_it_says_so_when_the_shape_is_not_what_we_typed() -> None:
