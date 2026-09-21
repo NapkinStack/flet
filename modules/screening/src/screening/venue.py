@@ -43,15 +43,21 @@ _MAX_GROWTH = 16
 #:
 #: **This constant is a trade, and both sides of it are measured.** Three wins the shapes
 #: where dense ground sits behind quiet ground — `wall 200k @6d` holds 6.0 days against 4.0
-#: at ten, and a trader with one enormous day a fortnight back keeps 13k fills against 1k.
-#: Ten wins a dense trader with a recent burst: at two pinned timestamps on the live address
-#: this module is tested against, three held 1.56 and 2.06 days where ten held 3.12 and
-#: reached the read it replaces.
+#: at ten, and a trader with one enormous day **twenty days back** keeps 13k fills against 1k.
+#: Ten wins a dense trader with a recent burst: on the live address this module is tested
+#: against, three held **roughly half** the window ten did at two of three timestamps
+#: sampled on 2026-09-21, and ten sat exactly on the read it replaces.
+#:
+#: The ratio is quoted rather than the day counts on purpose. Pinning `now_ms` does not make
+#: that comparison reproducible: the probe returns the trader's newest fills **as of the
+#: request**, so the window arithmetic is pinned but the chunk sizing is not. The same pin
+#: twenty-four minutes apart gave 2.06 days and 1.69. The ratio held at every moment tested;
+#: the absolute numbers did not, and a reader re-running this next month will get neither.
 #:
 #: Three is chosen because its advantage is systematic across several shapes while ten's is
-#: intermittent — at a third pinned timestamp on that same address the two are identical to
-#: four decimals. That is a judgement on a mixed table, not an optimum, and an earlier
-#: version of this comment claimed the trade did not exist. It does. See
+#: intermittent — at the third timestamp the two were identical. That is a judgement on a
+#: mixed table, not an optimum, and an earlier version of this comment claimed the trade did
+#: not exist. It does. See
 #: `docs/adr/0003-size-the-read-from-one-probe-and-accept-the-trade.md`.
 _CHUNK_READS = 3
 

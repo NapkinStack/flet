@@ -23,7 +23,7 @@ loss rather than removing it:
 | 1 | the read direction — S8, a window eleven days stale | quiet-month-then-burst traders: 0.07 of a day where the previous read held 30 |
 | 2 | chunk growth | quiet-ground-then-wall traders: 4 days where the previous read held 12 |
 | 3 | a retry when a chunk overshoots | the cut and the growth oscillated over the same ground |
-| 4 | a memory of spans known to overshoot | nothing found; a constant remains a trade |
+| 4 | a memory of spans known to overshoot | the author's claim of live parity: 1.68× and 2.00× behind the previous head at two of three sampled timestamps, and one shape behind **both** predecessors |
 
 The kernel says three consecutive attempts on one fix means the problem is in the framing
 (`AGENTS.md` §3). This is the fourth.
@@ -46,7 +46,10 @@ traded one defect for another three times.
 ## Consequences
 
 **Accepted.** On some traders the window is shorter than the read this replaces would have
-given — up to 2× at some timestamps on the live address. The answer states the dates it
+given — up to 2× at some timestamps on the live address. That figure is a ratio on purpose:
+pinning `now_ms` does not make the comparison reproducible, because the probe reads the
+trader's newest fills as of the request rather than as of the pinned instant, so absolute day
+counts drift within the hour while the ratio holds. The answer states the dates it
 holds and the factor it extrapolated by, so a short window is visible rather than silent.
 That is the property the module's rules require; it is not a reason to call the trade
 acceptable forever.
