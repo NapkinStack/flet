@@ -94,3 +94,14 @@ def test_it_refuses_to_answer_without_fills() -> None:
     """No verdict from partial data (AGENTS.md)."""
     with pytest.raises(ValueError):
         assess([], trader_account=Decimal(20_000), ticket=Decimal(2_000))
+
+
+def test_it_marks_a_monthly_figure_extrapolated_from_an_incomplete_window() -> None:
+    """When the venue's page cap stopped us short, the monthly figure is an extrapolation and
+    the answer must say so rather than present it as a measurement."""
+    trader = spread([fill("10000")] * 10, days=3)
+    v = assess(trader, trader_account=Decimal(10_000), ticket=Decimal(2_000), window_complete=False)
+    assert v.window_complete is False
+    assert any("extrapolat" in r.lower() for r in v.reasons), (
+        "an extrapolated figure must be named as one"
+    )

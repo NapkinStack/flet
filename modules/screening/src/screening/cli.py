@@ -16,6 +16,9 @@ from screening import venue
 from screening.model import Verdict
 from screening.verdict import assess
 
+#: The window the command asks the venue for. Thirty days is what a monthly figure means.
+WINDOW_DAYS = 30
+
 EXIT_COPYABLE = 0
 EXIT_NOT_COPYABLE = 1
 EXIT_NO_VERDICT = 2
@@ -42,7 +45,8 @@ def _render(address: str, verdict: Verdict) -> str:
     head = "COPYABLE" if verdict.copyable else "NOT COPYABLE"
     lines = [
         f"{head} — {address} at a {verdict.ticket:,.0f} ticket",
-        f"  read {verdict.fills_read} fills over {verdict.days_observed:.1f} days; "
+        f"  read {verdict.fills_read} fills over {verdict.days_observed:.1f} days"
+        f"{'' if verdict.window_complete else ' (the venue stopped us short of 30)'}; "
         f"trader account {verdict.trader_account:,.0f}",
     ]
     lines += [f"  · {reason}" for reason in verdict.reasons]
@@ -60,7 +64,7 @@ def main(argv: Sequence[str] | None = None, *, client: httpx.Client | None = Non
     owned = client is None
     http = client or venue.client()
     try:
-        fills = venue.fills(args.address, http)
+        window = venue.fills_since(args.address, days=WINDOW_DAYS, client=http)
         account = venue.account_value(args.address, http)
     except venue.VenueUnavailable as error:
         print(f"venue unavailable — no verdict: {error}", file=sys.stderr)
@@ -70,7 +74,13 @@ def main(argv: Sequence[str] | None = None, *, client: httpx.Client | None = Non
             http.close()
 
     try:
-        verdict = assess(fills, trader_account=account, ticket=ticket)
+        verdict = assess(
+            window.fills,
+            trader_account=account,
+            ticket=ticket,
+            window_days=window.days_requested if window.complete else None,
+            window_complete=window.complete,
+        )
     except ValueError as error:
         print(f"no verdict: {error}", file=sys.stderr)
         return EXIT_NO_VERDICT

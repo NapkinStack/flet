@@ -22,8 +22,21 @@ _MS_PER_DAY = Decimal(86_400_000)
 _DAYS_PER_MONTH = Decimal(30)
 
 
-def assess(fills: Sequence[Fill], trader_account: Decimal, ticket: Decimal) -> Verdict:
+def assess(
+    fills: Sequence[Fill],
+    trader_account: Decimal,
+    ticket: Decimal,
+    *,
+    window_days: Decimal | None = None,
+    window_complete: bool = True,
+) -> Verdict:
     """Can a member holding `ticket` copy this trader, and at what cost?
+
+    `window_days` is the period these fills represent. Given it, the monthly figures are the
+    fills themselves rather than an extrapolation; without it they are extrapolated from the
+    span between the first and the last, which is only safe when that span is the window that
+    was asked for. `window_complete=False` says the venue's page cap stopped the read short,
+    and the answer then names its monthly figures as extrapolated.
 
     Raises:
         ValueError: when the fills cannot support a verdict. No verdict from partial data.
@@ -35,7 +48,8 @@ def assess(fills: Sequence[Fill], trader_account: Decimal, ticket: Decimal) -> V
     if ticket <= 0:
         raise ValueError("the member's ticket must be positive")
 
-    days = (Decimal(max(f.time_ms for f in fills) - min(f.time_ms for f in fills))) / _MS_PER_DAY
+    span = (Decimal(max(f.time_ms for f in fills) - min(f.time_ms for f in fills))) / _MS_PER_DAY
+    days = window_days if window_days is not None else span
     if days <= 0:
         raise ValueError("the fills span no time: a monthly turnover cannot be computed from them")
 
@@ -70,6 +84,7 @@ def assess(fills: Sequence[Fill], trader_account: Decimal, ticket: Decimal) -> V
         monthly_turnover=monthly_turnover,
         monthly_fee_burden=monthly_fee_burden,
         minimum_ticket=minimum_ticket,
+        window_complete=window_complete,
         reasons=_reasons(
             copyable=copyable,
             ticket=ticket,
@@ -78,6 +93,8 @@ def assess(fills: Sequence[Fill], trader_account: Decimal, ticket: Decimal) -> V
             monthly_turnover=monthly_turnover,
             monthly_fee_burden=monthly_fee_burden,
             minimum_ticket=minimum_ticket,
+            days=days,
+            window_complete=window_complete,
         ),
     )
 
@@ -91,6 +108,8 @@ def _reasons(
     monthly_turnover: Decimal,
     monthly_fee_burden: Decimal,
     minimum_ticket: Decimal,
+    days: Decimal,
+    window_complete: bool,
 ) -> tuple[str, ...]:
     """Every figure the verdict rests on, stated. A verdict without its measurement is not
     an answer here (AGENTS.md)."""
@@ -121,6 +140,13 @@ def _reasons(
         said.append(
             f"that is above {FEE_BURDEN_ALERT:.0%} a month: the fees, not the strategy, "
             f"will decide this member's result"
+        )
+
+    if not window_complete:
+        said.append(
+            f"the venue stopped the read short of the window asked for: these monthly figures "
+            f"are **extrapolated** from the {days:.1f} days actually read, by a factor of "
+            f"{_DAYS_PER_MONTH / days:.1f}"
         )
 
     if unreproducible_share > 0:

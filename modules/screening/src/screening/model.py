@@ -62,4 +62,29 @@ class Verdict:
     """What copying costs the member per month, as a share of their ticket."""
     minimum_ticket: Decimal
     """The ticket needed to place COVERAGE_TARGET of this trader's orders."""
+    window_complete: bool
+    """False when the venue's page cap stopped the read short of the window asked for, so the
+    monthly figures above are extrapolated from less than that window."""
     reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class FillWindow:
+    """What was actually read, and whether it is the window that was asked for.
+
+    The venue returns at most a page of fills per call, so without this the observation window
+    is whatever the cap happened to cover — and every monthly figure derived from it is an
+    artefact of that cap rather than of the trader.
+    """
+
+    fills: tuple[Fill, ...]
+    days_requested: Decimal
+    complete: bool
+
+    @property
+    def days_covered(self) -> Decimal:
+        """The span of the fills actually read. Zero when there are fewer than two."""
+        if len(self.fills) < 2:
+            return Decimal(0)
+        span = max(f.time_ms for f in self.fills) - min(f.time_ms for f in self.fills)
+        return Decimal(span) / Decimal(86_400_000)

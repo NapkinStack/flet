@@ -17,7 +17,7 @@ DAY_MS = 86_400_000
 def venue(fills: list[dict[str, Any]], account: str) -> httpx.Client:
     def handler(request: httpx.Request) -> httpx.Response:
         kind = json.loads(request.content)["type"]
-        if kind == "userFills":
+        if kind.startswith("userFills"):
             return httpx.Response(200, json=fills)
         return httpx.Response(200, json={"marginSummary": {"accountValue": account}})
 
