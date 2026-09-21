@@ -24,6 +24,10 @@ COVERAGE_TARGET = Decimal("0.80")
 #: Above this monthly cost, the fee burden is called out rather than merely stated.
 FEE_BURDEN_ALERT = Decimal("0.05")
 
+#: Below this share of the window's days, a trader's volume is concentrated enough that a
+#: monthly average says little about what the next month would cost.
+CONCENTRATION_ALERT = Decimal("0.34")
+
 
 @dataclass(frozen=True)
 class Fill:
@@ -52,6 +56,10 @@ class Verdict:
     trader_account: Decimal
     fills_read: int
     days_observed: Decimal
+    days_traded: int
+    """Calendar days on which the trader actually traded. A month's volume in one burst is
+    not a month of trading, and the monthly figures below average over the window either
+    way — which understates what the next month would cost."""
     refused_share: Decimal
     """Share of the trader's orders that would fall under the venue's floor at this ticket."""
     unreproducible_share: Decimal

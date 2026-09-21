@@ -45,7 +45,8 @@ def _render(address: str, verdict: Verdict) -> str:
     head = "COPYABLE" if verdict.copyable else "NOT COPYABLE"
     lines = [
         f"{head} — {address} at a {verdict.ticket:,.0f} ticket",
-        f"  read {verdict.fills_read} fills over {verdict.days_observed:.1f} days"
+        f"  read {verdict.fills_read} fills over {verdict.days_observed:.1f} days, "
+        f"traded on {verdict.days_traded}"
         f"{'' if verdict.window_complete else ' (the venue stopped us short of 30)'}; "
         f"trader account {verdict.trader_account:,.0f}",
     ]
