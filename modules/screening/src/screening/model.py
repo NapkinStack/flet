@@ -82,6 +82,10 @@ class FillWindow:
     The venue returns at most a page of fills per call, so without this the observation window
     is whatever the cap happened to cover — and every monthly figure derived from it is an
     artefact of that cap rather than of the trader.
+
+    **It always ends at the moment of the run.** The read walks backwards from now, so a
+    window cut short by the read budget is missing its oldest days, never its newest: a
+    trader who stopped a fortnight ago cannot read as current.
     """
 
     fills: tuple[Fill, ...]
@@ -92,9 +96,10 @@ class FillWindow:
     waits: int = 0
     """How many times the read backed off. A retry that succeeds hides a degradation unless
     it is counted (`operations.md` E4)."""
-    """The window actually read. When the read is cut short this is a **recent** window, not
-    the stale front of the one asked for — a trader who stopped a fortnight ago must not read
-    as current."""
+
+    reads: int = 0
+    """How many heavy reads the venue was asked for. The venue meters by weight, so a figure
+    the operator cannot see is a cost nobody is watching."""
 
     @property
     def first_fill_ms(self) -> int | None:

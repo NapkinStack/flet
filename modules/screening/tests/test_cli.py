@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 import httpx
@@ -13,6 +14,7 @@ from screening.venue import Retry
 
 ADDRESS = "0x102d1d1a6240581a809bac9b9b4dff2eafe8c058"
 DAY_MS = 86_400_000
+NOW_MS = int(time.time() * 1000)
 
 
 def venue(fills: list[dict[str, Any]], account: str) -> httpx.Client:
@@ -26,7 +28,19 @@ def venue(fills: list[dict[str, Any]], account: str) -> httpx.Client:
 
 
 def a_fill(px: str, day: int, crossed: bool = True) -> dict[str, Any]:
-    return {"coin": "BTC", "px": px, "sz": "1", "time": day * DAY_MS, "crossed": crossed}
+    """`day` 0 is twenty-nine days ago, `day` 29 is today.
+
+    Dated against the clock the command reads, not against the epoch: the read now keeps only
+    what falls inside the window it was asked for, so a fill stamped 1970 is correctly thrown
+    away — and a fixture that relies on it being kept is testing nothing.
+    """
+    return {
+        "coin": "BTC",
+        "px": px,
+        "sz": "1",
+        "time": NOW_MS - (29 - day) * DAY_MS,
+        "crossed": crossed,
+    }
 
 
 def test_it_answers_for_a_copyable_trader(capsys: pytest.CaptureFixture[str]) -> None:

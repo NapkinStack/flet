@@ -23,9 +23,16 @@ TIMEOUT_SECONDS = 20.0
 #: The venue never returns more than this many fills in one answer.
 PAGE_SIZE = 2000
 
-#: How many pages we are willing to ask for. A trader busy enough to fill them all is one
-#: whose window will be short, and `FillWindow.complete` is how the answer says so.
+#: How many heavy reads (`userFillsByTime`) one invocation will make. The venue meters by
+#: weight rather than by call, so this is a budget for the venue's sake as much as for ours.
+#: A trader busy enough to exhaust it is one whose window will be short, and
+#: `FillWindow.complete` is how the answer says so.
 MAX_PAGES = 20
+
+#: Chunks are sized from the measured rate to come back about this fraction of a page full.
+#: The headroom is what lets a trader's rate rise between the probe and the read without
+#: costing a second heavy read per chunk.
+_CHUNK_LOAD = 2
 
 _MS_PER_DAY = 86_400_000
 
@@ -105,7 +112,16 @@ def _post(payload: dict[str, Any], client: httpx.Client, waiting: _Waiting) -> A
 
 def fills(address: str, client: httpx.Client, *, retry: Retry | None = None) -> list[Fill]:
     """The trader's recent public fills, oldest first as the venue returns them."""
-    body = _post({"type": "userFills", "user": address}, client, _Waiting(retry or Retry()))
+    return _recent(address, client, _Waiting(retry or Retry()))
+
+
+def _recent(address: str, client: httpx.Client, waiting: _Waiting) -> list[Fill]:
+    """The venue's own most recent page: at most `PAGE_SIZE` fills, ending now.
+
+    This is the cheap read. It answers the question outright for a sparse trader, and for a
+    dense one it measures the rate that sizes every heavy read that follows.
+    """
+    body = _post({"type": "userFills", "user": address}, client, waiting)
     if not isinstance(body, list):
         raise VenueUnavailable("userFills: expected a list of fills")
     return _as_fills(body, "userFills")
@@ -135,48 +151,83 @@ def fills_since(
     now_ms: int | None = None,
     retry: Retry | None = None,
 ) -> FillWindow:
-    """The trader's public fills over the last `days`, paged.
+    """The trader's public fills over the last `days`, read **backwards from now**.
 
-    `userFills` returns only the most recent page, so the window it covers is set by the
-    venue's cap rather than by the question — which makes any monthly figure derived from it
-    an artefact. This asks for a window instead, and reports whether it reached the end of it.
+    The venue answers ascending and at most a page at a time, so a range denser than the read
+    budget yields its *oldest* part — the half that cannot answer "can my members copy this
+    trader now". Reading backwards inverts what a cut-short read loses: it drops the oldest
+    fills, and **the window it keeps always ends at `now`**. That is the property, not the
+    report of it.
     """
     now = now_ms if now_ms is not None else int(time.time() * 1000)
     asked_from = now - days * _MS_PER_DAY
     waiting = _Waiting(retry or Retry())
 
-    read, complete, covered_ms = _read_ascending(address, asked_from, now, client, waiting)
-    if complete:
-        return FillWindow(tuple(read), Decimal(days), True, asked_from, now, waiting.waits)
+    probe = _recent(address, client, waiting)
+    oldest_probed = min((f.time_ms for f in probe), default=now)
 
-    # The read was cut short. Paging ascends, so what it kept is the OLDEST part of the window
-    # and what it dropped is the newest — the half that answers "can my members copy this
-    # trader *now*". Read again over a window that ends now, sized to what the first pass got
-    # through at this trader's rate.
-    # The narrowed window can overflow too, for a trader dense enough. Its own completeness
-    # flag is kept: dropping it is how a second-pass truncation came back as "complete".
-    recent_from = now - max(covered_ms, _MS_PER_DAY)
-    read, _, _ = _read_ascending(address, recent_from, now, client, waiting)
-    # Incomplete either way: the window asked for was never covered. Whether the narrowed one
-    # was is no longer load-bearing, because the answer now reports the dates of the fills it
-    # actually holds rather than the range it requested.
-    return FillWindow(tuple(read), Decimal(days), False, recent_from, now, waiting.waits)
+    # The venue's own page already reaches past the start of the window: the question is
+    # answered outright, and not one heavy read was spent on it.
+    if len(probe) < PAGE_SIZE or oldest_probed <= asked_from:
+        kept = tuple(f for f in probe if f.time_ms >= asked_from)
+        return FillWindow(kept, Decimal(days), True, asked_from, now, waiting.waits, 0)
+
+    # Dense enough that a page does not reach back far. A page spans `now - oldest_probed`, so
+    # that is the trader's recent rate, and chunks are cut from it.
+    chunk_ms = max((now - oldest_probed) // _CHUNK_LOAD, 1)
+    held: list[Fill] = []
+    covered_from = now
+    budget = MAX_PAGES
+    end = now
+
+    while end >= asked_from and budget > 0:
+        start = max(asked_from, end - chunk_ms + 1)
+        chunk, whole, spent = _read_range(address, start, end, client, waiting, budget)
+        budget -= spent
+        if not whole:
+            # The chunk ran out of budget part way, so its newest end is missing. Joining it
+            # to what is already held would leave a hole in the middle of the window and no
+            # figure drawn from it would mean anything. Dropped, and the window stops here.
+            break
+        held = chunk + held
+        covered_from = start
+        end = start - 1
+
+    return FillWindow(
+        tuple(held),
+        Decimal(days),
+        covered_from <= asked_from,
+        covered_from,
+        now,
+        waiting.waits,
+        MAX_PAGES - budget,
+    )
 
 
-def _read_ascending(
-    address: str, start_ms: int, end_ms: int, client: httpx.Client, waiting: _Waiting
+def _read_range(
+    address: str,
+    start_ms: int,
+    end_ms: int,
+    client: httpx.Client,
+    waiting: _Waiting,
+    budget: int,
 ) -> tuple[list[Fill], bool, int]:
-    """Pages forward from `start_ms`. Returns the fills, whether it reached the end of the
-    range, and how much of it the read got through."""
+    """Pages ascending through `[start_ms, end_ms]` until the range is exhausted.
+
+    Returns the fills, whether the range was read **to its end**, and how many heavy reads it
+    spent. A caller that gets `False` holds a prefix of the range, never the whole of it.
+    """
     read: list[Fill] = []
     cursor = start_ms
-    for _ in range(MAX_PAGES):
+    spent = 0
+    while spent < budget:
         page = _fills_page(address, cursor, end_ms, client, waiting)
+        spent += 1
         read.extend(page)
         if len(page) < PAGE_SIZE:
-            return read, True, end_ms - start_ms
+            return read, True, spent
         cursor = page[-1].time_ms + 1
-    return read, False, cursor - start_ms
+    return read, False, spent
 
 
 def _fills_page(
