@@ -8,7 +8,7 @@ deliverables:
   - id: D1
     title: "Spike — does an administrator's vouching move anyone? Five private invitations, read at day 14"
     module: null
-    state: simulated
+    state: deferred
     acceptance:
       - "Given docs/project/link-test-protocol.md, private variant, when the cycle starts, then the five messages are sent within 3 days and Karim's reason for choosing each member is recorded as the stated bias it is"
       - "Given day 14, when it is reached, then the number who actually started is read from their public addresses — refuted at 0 of 5, and no result confirms"
@@ -119,7 +119,9 @@ simulation instead. `docs/project/d1-simulation.md` is that model, and it is mar
 `status: simulation` in its own front matter.
 
 **D1's acceptance criteria are unchanged and unmet.** No member of any community has been
-asked. The deliverable's state is `simulated`, which is not `done`.
+asked. The deliverable's state is `deferred` — the framing vocabulary has no word for
+"simulated", and `deferred` is the honest one: the work was not done in this cycle. Calling it
+anything else would put a model where a measurement belongs.
 
 The model's one useful output is about the protocol rather than the product: at the rate the
 model itself assumes, five invitations return **refuted** 47% of the time even when the
