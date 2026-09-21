@@ -66,6 +66,9 @@ dependencies: []
 # No stack is imposed. check and test are required once the module holds more than its
 # description (fitness M7): declare them before its first file of code.
 commands:
+  check: "uv run ruff format --check . && uv run ruff check . && uv run mypy"
+  test: "uv run pytest"
+  bootstrap: "uv sync --all-groups"
 #  check:                        # under 2 min: format, lint, types
 #  test:                         # NEVER starts another module
 #  bootstrap:                    # optional: make the module usable from a fresh clone

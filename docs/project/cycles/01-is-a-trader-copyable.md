@@ -8,7 +8,7 @@ deliverables:
   - id: D1
     title: "Spike — does an administrator's vouching move members to copy? The link test, launched and read at day 14"
     module: null
-    state: proposed
+    state: ready
     acceptance:
       - "Given the protocol in docs/project/link-test-protocol.md, when the cycle starts, then the administrator's post is live within 3 days and the server's member count and the shortened link are recorded"
       - "Given a 500-member server, when day 14 is reached, then the number of members who started copying is recorded from the public addresses posted in the thread — refuted below 4, confirmed at 9 or more"
@@ -16,7 +16,7 @@ deliverables:
   - id: D2
     title: "Spike — what Discord and Telegram actually allow, read on their own pages"
     module: null
-    state: proposed
+    state: ready
     acceptance:
       - "Given the developer portal opened by the decider, when the verification page is read, then the eligibility and requirement thresholds are recorded with their source, replacing the excerpt-grade 75 and 100"
       - "Given Discord's Developer Policy, when the clause on financial information is read, then it is quoted in the charter's constraints or recorded as absent"
@@ -24,7 +24,7 @@ deliverables:
   - id: D3
     title: "An administrator asks whether a trader is copyable for a given member ticket, and gets a grounded answer"
     module: screening
-    state: proposed
+    state: in-progress
     acceptance:
       - "Given a trader's public address and a member ticket in euros, when the administrator runs the command, then the answer states whether the trader is copyable and why, from that trader's real fills"
       - "Given a trader whose typical order falls under 10 USDC once scaled to the ticket, when the command runs, then it is reported as not copyable at that ticket, with the share of orders that would be refused"
