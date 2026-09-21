@@ -285,24 +285,30 @@ def test_each_threshold_falls_on_the_side_the_decision_says() -> None:
     from screening.verdict import _reservations
 
     tiny = Decimal("0.0000001")
-    quiet = {
-        "monthly_fee_burden": FEE_BURDEN_ALERT,
-        "unreproducible_share": UNREPRODUCIBLE_ALERT,
-        "days_traded": 11,
-        "calendar_days": 30,
-        "stretch": EXTRAPOLATION_ALERT,
-    }
-    assert _reservations(**quiet) == (), "exactly at every threshold trips nothing"
 
-    assert "fees" in _reservations(**{**quiet, "monthly_fee_burden": FEE_BURDEN_ALERT + tiny})
-    assert "reproducibility" in _reservations(
-        **{**quiet, "unreproducible_share": UNREPRODUCIBLE_ALERT + tiny}
-    )
-    assert "extrapolation" in _reservations(**{**quiet, "stretch": EXTRAPOLATION_ALERT + tiny})
+    def at(
+        *,
+        fee: Decimal = FEE_BURDEN_ALERT,
+        posted: Decimal = UNREPRODUCIBLE_ALERT,
+        traded: int = 11,
+        stretch: Decimal = EXTRAPOLATION_ALERT,
+    ) -> tuple[str, ...]:
+        return _reservations(
+            monthly_fee_burden=fee,
+            unreproducible_share=posted,
+            days_traded=traded,
+            calendar_days=30,
+            stretch=stretch,
+        )
+
+    assert at() == (), "exactly at every threshold trips nothing"
+    assert "fees" in at(fee=FEE_BURDEN_ALERT + tiny)
+    assert "reproducibility" in at(posted=UNREPRODUCIBLE_ALERT + tiny)
+    assert "extrapolation" in at(stretch=EXTRAPOLATION_ALERT + tiny)
     # Concentration is the one stated the other way round — `a third OR LESS` — so exactly a
     # third fires, and one day more does not.
-    assert "concentration" in _reservations(**{**quiet, "days_traded": 10})
-    assert _reservations(**{**quiet, "days_traded": 11}) == ()
+    assert "concentration" in at(traded=10)
+    assert at(traded=11) == ()
 
 
 def test_the_ceiling_is_past_thirty_not_at_it() -> None:
