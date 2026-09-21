@@ -55,8 +55,8 @@ def _render(address: str, verdict: Verdict, window: FillWindow) -> str:
         f"{held_from} to {held_to}"
         if window.complete
         else (
-            f"{held_from} to {held_to} only — the venue could not return the "
-            f"{window.days_requested:.0f} days asked for, and this is the part it did return"
+            f"{held_from} to {held_to} — the most recent part of the "
+            f"{window.days_requested:.0f} days asked for, not the oldest"
         )
     )
     lines = [
@@ -64,11 +64,12 @@ def _render(address: str, verdict: Verdict, window: FillWindow) -> str:
         f"  read {verdict.fills_read} fills over {window_label}, "
         f"traded on {verdict.days_traded} of {verdict.calendar_days} days; "
         f"trader account {verdict.trader_account:,.0f}",
+        f"  cost to the venue: {window.reads} heavy read(s) of a {venue.MAX_PAGES} budget",
     ]
     if window.waits:
         lines.append(
             f"  the venue asked us to slow down {window.waits} time(s)"
-            + ("" if window.complete else ", and the read below is the part that got through")
+            + ("" if window.complete else ", and the read below stops where the budget did")
         )
     lines += [f"  · {reason}" for reason in verdict.reasons]
     return "\n".join(lines)

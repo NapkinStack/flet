@@ -1,9 +1,13 @@
-"""The venue returns at most 2000 fills per call, so the observation window is whatever that
-cap happens to cover. These are the tests that stop a monthly figure being an artefact of it.
+"""The venue answers at most 2000 fills per call, ascending, so a range denser than the read
+budget yields its OLDEST part. For "can my members copy this trader?", that is the wrong half.
+
+These are the tests that pin the direction of the read: whatever gets dropped, the window kept
+ends at the moment of the run.
 """
 
 from __future__ import annotations
 
+import bisect
 import json
 from decimal import Decimal
 from typing import Any
@@ -22,57 +26,169 @@ def row(time_ms: int) -> dict[str, Any]:
     return {"coin": "BTC", "px": "100", "sz": "1", "time": time_ms, "crossed": True}
 
 
-def paging_client(pages: list[list[dict[str, Any]]]) -> tuple[httpx.Client, list[int]]:
-    """Answers each call with the next page, and records the startTime it was asked for."""
-    asked: list[int] = []
+def venue(series: list[int]) -> tuple[httpx.Client, list[dict[str, Any]]]:
+    """A venue holding `series` (ascending fill times), answering as Hyperliquid does.
+
+    `userFills` returns the **newest** page. `userFillsByTime` returns the **oldest** page
+    within the range asked for — which is the whole reason a naive read keeps stale fills.
+    """
+    calls: list[dict[str, Any]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
-        asked.append(int(payload["startTime"]))
-        page = pages[len(asked) - 1] if len(asked) <= len(pages) else []
-        return httpx.Response(200, json=page)
+        calls.append(payload)
+        if payload["type"] == "userFills":
+            chosen = series[-PAGE_SIZE:]
+        else:
+            start, end = int(payload["startTime"]), int(payload["endTime"])
+            lo = bisect.bisect_left(series, start)
+            hi = bisect.bisect_right(series, end)
+            chosen = series[lo:hi][:PAGE_SIZE]
+        return httpx.Response(200, json=[row(t) for t in chosen])
 
-    return httpx.Client(transport=httpx.MockTransport(handler)), asked
+    return httpx.Client(transport=httpx.MockTransport(handler)), calls
 
 
-def test_it_asks_for_the_window_it_wants_not_the_one_the_cap_gives() -> None:
-    client, asked = paging_client([[row(NOW_MS - 29 * DAY_MS), row(NOW_MS - DAY_MS)]])
+def evenly(per_day: int, days: int) -> list[int]:
+    """A trader filling at a constant rate, the newest fill landing exactly at `NOW_MS`."""
+    step = DAY_MS // per_day
+    return list(range(NOW_MS - days * DAY_MS, NOW_MS + 1, step))
+
+
+def rising(quiet_per_day: int, busy_per_day: int, busy_days: int, days: int) -> list[int]:
+    """A trader who was quiet for most of the month and has been frantic for the last few days.
+
+    This is the shape that broke the old read. Paging forward from thirty days back, the budget
+    is spent crossing the quiet stretch and dies a little way into the busy one — so the window
+    kept ends days before the question was asked, while the trader is still filling orders.
+    """
+    busy_from = NOW_MS - busy_days * DAY_MS
+    quiet = list(range(NOW_MS - days * DAY_MS, busy_from, DAY_MS // quiet_per_day))
+    busy = list(range(busy_from, NOW_MS + 1, DAY_MS // busy_per_day))
+    return quiet + busy
+
+
+def heavy(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [c for c in calls if c["type"] == "userFillsByTime"]
+
+
+# --- the cheap path ---------------------------------------------------------------------
+
+
+def test_a_sparse_trader_costs_no_heavy_read_at_all() -> None:
+    """The venue's own page already holds everything. Asking for it by time as well would be
+    a second read of the same fills, metered by weight, for nothing."""
+    client, calls = venue([NOW_MS - 29 * DAY_MS, NOW_MS - DAY_MS])
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert asked == [NOW_MS - 30 * DAY_MS], "the first call must start 30 days back"
     assert window.complete is True
     assert len(window.fills) == 2
+    assert heavy(calls) == [], "a sparse trader must cost one cheap read and nothing else"
+    assert window.reads == 0
 
 
-def test_it_pages_until_the_venue_stops_filling_the_page() -> None:
-    """A full page means there is more behind it."""
-    first = [row(NOW_MS - (30 - i // 100) * DAY_MS) for i in range(PAGE_SIZE)]
-    second = [row(NOW_MS - DAY_MS)] * 3
-    client, asked = paging_client([first, second])
+def test_the_venue_s_own_page_answers_when_it_reaches_past_the_window() -> None:
+    """A full page that reaches back beyond 30 days means the 30 days are inside it."""
+    series = evenly(per_day=50, days=40)
+    client, calls = venue(series)
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert len(asked) == 2, "a full page must be followed by another call"
-    assert asked[1] == first[-1]["time"] + 1, "the next page starts after the last fill read"
-    assert len(window.fills) == PAGE_SIZE + 3
     assert window.complete is True
+    assert heavy(calls) == [], "nothing older than the page was needed"
+    assert all(f.time_ms >= NOW_MS - 30 * DAY_MS for f in window.fills), "and nothing older kept"
 
 
-def test_it_stops_at_the_page_cap_and_says_the_window_is_incomplete() -> None:
-    """A trader busy enough to fill every page is exactly the one whose monthly figure
-    would otherwise be invented."""
-    full = [row(NOW_MS - 30 * DAY_MS + i) for i in range(PAGE_SIZE)]
-    client, asked = paging_client([full] * (2 * MAX_PAGES + 4))
+# --- the direction of the read ----------------------------------------------------------
+
+
+def test_a_dense_window_is_read_backwards_from_now() -> None:
+    client, calls = venue(evenly(per_day=4000, days=40))
+    fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    reads = heavy(calls)
+    assert reads, "a dense trader needs heavy reads"
+    assert reads[0]["endTime"] == NOW_MS, "the first heavy read must end now"
+    assert int(reads[0]["startTime"]) > NOW_MS - DAY_MS, (
+        "and it must be a recent CHUNK, not the whole month — the old read also ended its "
+        "first call at now, while starting it thirty days back, which is the whole defect"
+    )
+    ends = [int(c["endTime"]) for c in reads]
+    assert ends == sorted(ends, reverse=True), "and each one after it reaches further back"
+    starts = [int(c["startTime"]) for c in reads]
+    assert starts == sorted(starts, reverse=True), "walking backwards, never forwards"
+
+
+def test_a_read_cut_short_by_the_budget_keeps_the_newest_days_not_the_oldest() -> None:
+    """S8. A trader busy enough that 30 days cannot be read at all: what survives the budget
+    must be the days next to the question, not the far side of the month."""
+    client, _ = venue(rising(quiet_per_day=200, busy_per_day=20_000, busy_days=5, days=40))
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    # Two passes at most: the window asked for, then a recent window sized to what that got
-    # through. Neither pages forever.
-    assert len(asked) <= 2 * MAX_PAGES, "it must not page forever"
-    assert window.complete is False, "an incomplete window must say so"
-    assert len(window.fills) == PAGE_SIZE * MAX_PAGES, "what it kept is one full pass"
+
+    assert window.complete is False, "30 days did not fit and the answer must say so"
+    assert window.ends_at_ms == NOW_MS
+    assert window.starts_at_ms > NOW_MS - 30 * DAY_MS, "it is a shorter, recent window"
+    assert window.last_fill_ms is not None
+    assert window.last_fill_ms >= NOW_MS - DAY_MS, (
+        "the newest fill held must be from the day of the run — this is the assertion the "
+        "old ascending read failed, returning fills eleven days stale"
+    )
+
+
+def test_what_it_keeps_has_no_hole_in_it() -> None:
+    """A chunk the budget could not finish is missing its newest end. Joining it to the rest
+    would leave a gap, and every rate computed across that gap would be wrong."""
+    series = rising(quiet_per_day=200, busy_per_day=20_000, busy_days=5, days=40)
+    client, _ = venue(series)
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+
+    first, last = window.first_fill_ms, window.last_fill_ms
+    assert first is not None and last is not None
+    expected = series[bisect.bisect_left(series, first) : bisect.bisect_right(series, last)]
+    assert len(window.fills) == len(expected), "every fill between the two ends must be held"
+
+
+# --- what the read costs ----------------------------------------------------------------
+
+
+def test_it_never_exceeds_the_read_budget() -> None:
+    client, calls = venue(evenly(per_day=4000, days=40))
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert len(heavy(calls)) <= MAX_PAGES, "the venue meters by weight; this is the ceiling"
+    assert window.reads == len(heavy(calls)), "and the answer states what it actually spent"
+
+
+def test_a_dense_trader_costs_far_fewer_reads_than_the_ceiling_when_the_window_fits() -> None:
+    """Chunks are sized from the measured rate, so a trader whose 30 days do fit is read in
+    roughly the number of pages their fills occupy — not in twenty reads regardless."""
+    client, calls = venue(evenly(per_day=200, days=40))
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.complete is True
+    assert len(heavy(calls)) <= MAX_PAGES
+
+
+# --- what the window reports --------------------------------------------------------------
+
+
+def test_it_reports_the_fills_it_holds_not_the_range_it_asked_for() -> None:
+    """Every defect on this branch has been the same one: a number derived from what was
+    ASKED FOR, printed as a fact about what was READ."""
+    client, _ = venue([NOW_MS - 22 * DAY_MS, NOW_MS - 9 * DAY_MS])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.first_fill_ms == NOW_MS - 22 * DAY_MS
+    assert window.last_fill_ms == NOW_MS - 9 * DAY_MS
+    assert window.calendar_days == 13, "the days it holds, not the 30 it asked for"
 
 
 def test_it_reports_the_window_it_actually_covered() -> None:
-    client, _ = paging_client([[row(NOW_MS - 10 * DAY_MS), row(NOW_MS - 2 * DAY_MS)]])
+    client, _ = venue([NOW_MS - 10 * DAY_MS, NOW_MS - 2 * DAY_MS])
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
     assert window.days_covered == Decimal(8), "the span of the fills actually read"
     assert window.days_requested == Decimal(30)
+
+
+def test_an_empty_read_has_no_dates_to_report() -> None:
+    client, _ = venue([])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.first_fill_ms is None
+    assert window.calendar_days == 0
+    assert window.complete is True, "the venue answered; there is simply nothing there"
 
 
 def test_it_says_so_when_a_page_cannot_be_read() -> None:
@@ -81,63 +197,3 @@ def test_it_says_so_when_a_page_cannot_be_read() -> None:
 
     with pytest.raises(VenueUnavailable):
         fills_since(ADDRESS, days=30, client=httpx.Client(transport=httpx.MockTransport(handler)))
-
-
-def test_a_cut_short_read_keeps_the_recent_end_not_the_stale_one() -> None:
-    """Paging ascends from the start of a range, so stopping at the cap keeps the OLDEST part
-    and throws away the newest. For "can my members copy this trader?", the half worth keeping
-    is the recent one — a trader who stopped a fortnight ago must not read as current."""
-    calls: list[tuple[int, int]] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        payload = json.loads(request.content)
-        start, end = int(payload["startTime"]), int(payload["endTime"])
-        calls.append((start, end))
-        span = end - start
-        # the trader fills a page every half-day, so a 30-day window cannot fit
-        if span > 10 * DAY_MS:
-            return httpx.Response(200, json=[row(start + i) for i in range(PAGE_SIZE)])
-        return httpx.Response(200, json=[row(start), row(end - 1)])
-
-    window = fills_since(
-        ADDRESS, days=30, client=httpx.Client(transport=httpx.MockTransport(handler)), now_ms=NOW_MS
-    )
-    assert window.complete is False, "30 days did not fit and the answer must say so"
-    assert window.ends_at_ms == NOW_MS, "the window kept must end now, not a fortnight ago"
-    assert window.starts_at_ms > NOW_MS - 30 * DAY_MS, "it is a shorter, recent window"
-    assert calls[-1][1] == NOW_MS, "the last read must reach up to now"
-
-
-def test_it_reports_the_dates_it_read_so_a_truncated_answer_can_be_judged() -> None:
-    client, _ = paging_client([[row(NOW_MS - 10 * DAY_MS), row(NOW_MS - 2 * DAY_MS)]])
-    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert window.starts_at_ms == NOW_MS - 30 * DAY_MS, "what it asked for"
-    assert window.ends_at_ms == NOW_MS
-    assert window.calendar_days == 8, "and, separately, what it holds — the two are not the same"
-
-
-def test_it_reports_the_fills_it_holds_not_the_range_it_asked_for() -> None:
-    """Every defect on this branch has been the same one: a number derived from what was
-    ASKED FOR, printed as a fact about what was READ. The window carries the timestamps it
-    actually holds, so the two cannot be confused again."""
-    client, _ = paging_client([[row(NOW_MS - 22 * DAY_MS), row(NOW_MS - 9 * DAY_MS)]])
-    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert window.first_fill_ms == NOW_MS - 22 * DAY_MS
-    assert window.last_fill_ms == NOW_MS - 9 * DAY_MS
-    assert window.calendar_days == 13, "the days it holds, not the 30 it asked for"
-
-
-def test_a_second_pass_that_also_overflows_is_still_incomplete() -> None:
-    """The narrowed window can overflow too. Saying `complete` then is the failure the
-    narrowing was written to prevent, wearing different clothes."""
-    full = [row(NOW_MS - 30 * DAY_MS + i) for i in range(PAGE_SIZE)]
-    client, _ = paging_client([full] * (2 * MAX_PAGES + 4))
-    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert window.complete is False, "neither pass reached the end of its range"
-
-
-def test_an_empty_read_has_no_dates_to_report() -> None:
-    client, _ = paging_client([[]])
-    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
-    assert window.first_fill_ms is None
-    assert window.calendar_days == 0
