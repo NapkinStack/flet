@@ -1,0 +1,81 @@
+"""The venue returns at most 2000 fills per call, so the observation window is whatever that
+cap happens to cover. These are the tests that stop a monthly figure being an artefact of it.
+"""
+
+from __future__ import annotations
+
+import json
+from decimal import Decimal
+from typing import Any
+
+import httpx
+import pytest
+
+from screening.venue import MAX_PAGES, PAGE_SIZE, VenueUnavailable, fills_since
+
+ADDRESS = "0x0000000000000000000000000000000000000001"
+DAY_MS = 86_400_000
+NOW_MS = 1_790_000_000_000
+
+
+def row(time_ms: int) -> dict[str, Any]:
+    return {"coin": "BTC", "px": "100", "sz": "1", "time": time_ms, "crossed": True}
+
+
+def paging_client(pages: list[list[dict[str, Any]]]) -> tuple[httpx.Client, list[int]]:
+    """Answers each call with the next page, and records the startTime it was asked for."""
+    asked: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        asked.append(int(payload["startTime"]))
+        page = pages[len(asked) - 1] if len(asked) <= len(pages) else []
+        return httpx.Response(200, json=page)
+
+    return httpx.Client(transport=httpx.MockTransport(handler)), asked
+
+
+def test_it_asks_for_the_window_it_wants_not_the_one_the_cap_gives() -> None:
+    client, asked = paging_client([[row(NOW_MS - 29 * DAY_MS), row(NOW_MS - DAY_MS)]])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert asked == [NOW_MS - 30 * DAY_MS], "the first call must start 30 days back"
+    assert window.complete is True
+    assert len(window.fills) == 2
+
+
+def test_it_pages_until_the_venue_stops_filling_the_page() -> None:
+    """A full page means there is more behind it."""
+    first = [row(NOW_MS - (30 - i // 100) * DAY_MS) for i in range(PAGE_SIZE)]
+    second = [row(NOW_MS - DAY_MS)] * 3
+    client, asked = paging_client([first, second])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert len(asked) == 2, "a full page must be followed by another call"
+    assert asked[1] == first[-1]["time"] + 1, "the next page starts after the last fill read"
+    assert len(window.fills) == PAGE_SIZE + 3
+    assert window.complete is True
+
+
+def test_it_stops_at_the_page_cap_and_says_the_window_is_incomplete() -> None:
+    """A trader busy enough to fill every page is exactly the one whose monthly figure
+    would otherwise be invented."""
+    full = [row(NOW_MS - 30 * DAY_MS + i) for i in range(PAGE_SIZE)]
+    client, asked = paging_client([full] * (MAX_PAGES + 2))
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert len(asked) == MAX_PAGES, "it must not page forever"
+    assert window.complete is False, "an incomplete window must say so"
+    assert len(window.fills) == PAGE_SIZE * MAX_PAGES
+
+
+def test_it_reports_the_window_it_actually_covered() -> None:
+    client, _ = paging_client([[row(NOW_MS - 10 * DAY_MS), row(NOW_MS - 2 * DAY_MS)]])
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.days_covered == Decimal(8), "the span of the fills actually read"
+    assert window.days_requested == Decimal(30)
+
+
+def test_it_says_so_when_a_page_cannot_be_read() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("no route to host")
+
+    with pytest.raises(VenueUnavailable):
+        fills_since(ADDRESS, days=30, client=httpx.Client(transport=httpx.MockTransport(handler)))

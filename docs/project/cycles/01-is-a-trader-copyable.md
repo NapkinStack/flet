@@ -127,9 +127,15 @@ Candidates for the next framing, in the order the discovery makes them urgent:
   **capital**" where the code computes a share of the **ticket**; they coincide only when the
   ticket is the member's whole allocation. **Words to settle before the command states them to
   an administrator.**
-- **`days_observed` is unbounded.** Monthly figures are extrapolated by x30/days from the span
-  between the first and last fill. A trader whose fills all land inside a few hours yields a
-  very large extrapolation, and no scenario bounds it. Raised by the verifier.
+- **`days_observed` was unbounded — found, then fixed before merging.** The venue returns at
+  most 2,000 fills per call, so the observation window was whatever that cap covered, and the
+  monthly figures were extrapolated from it. The second verifier showed this is the **normal
+  path for any active trader**, not an edge case: one real trader read 2,000 fills over 0.6
+  days and was told his copier would pay **1,371% of their ticket per month**. Fixed by paging
+  `userFillsByTime` over a requested 30-day window; the same trader now reads 8,186 fills over
+  30.0 days and 85.49% — still high, but a measurement of a genuinely hyperactive trader rather
+  than an artefact of a cap. When the page limit does stop the read short, the answer says so
+  and names its figures as extrapolated.
 
 ## Closure
 

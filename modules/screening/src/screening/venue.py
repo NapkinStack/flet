@@ -6,15 +6,25 @@ responses are typed by us, so a breaking change is ours to notice.
 
 from __future__ import annotations
 
+import time
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import httpx
 
-from screening.model import Fill
+from screening.model import Fill, FillWindow
 
 INFO_URL = "https://api.hyperliquid.xyz/info"
 TIMEOUT_SECONDS = 20.0
+
+#: The venue never returns more than this many fills in one answer.
+PAGE_SIZE = 2000
+
+#: How many pages we are willing to ask for. A trader busy enough to fill them all is one
+#: whose window will be short, and `FillWindow.complete` is how the answer says so.
+MAX_PAGES = 20
+
+_MS_PER_DAY = 86_400_000
 
 
 class VenueUnavailable(RuntimeError):
@@ -24,7 +34,7 @@ class VenueUnavailable(RuntimeError):
     """
 
 
-def _post(payload: dict[str, str], client: httpx.Client) -> Any:
+def _post(payload: dict[str, Any], client: httpx.Client) -> Any:
     try:
         response = client.post(INFO_URL, json=payload, timeout=TIMEOUT_SECONDS)
         response.raise_for_status()
@@ -40,6 +50,10 @@ def fills(address: str, client: httpx.Client) -> list[Fill]:
     body = _post({"type": "userFills", "user": address}, client)
     if not isinstance(body, list):
         raise VenueUnavailable("userFills: expected a list of fills")
+    return _as_fills(body, "userFills")
+
+
+def _as_fills(rows: list[Any], what: str) -> list[Fill]:
     try:
         return [
             Fill(
@@ -49,10 +63,43 @@ def fills(address: str, client: httpx.Client) -> list[Fill]:
                 time_ms=int(row["time"]),
                 took_liquidity=bool(row["crossed"]),
             )
-            for row in body
+            for row in rows
         ]
     except (KeyError, TypeError, ValueError, InvalidOperation) as error:
-        raise VenueUnavailable(f"userFills: unexpected shape ({error})") from error
+        raise VenueUnavailable(f"{what}: unexpected shape ({error})") from error
+
+
+def fills_since(
+    address: str, days: int, client: httpx.Client, *, now_ms: int | None = None
+) -> FillWindow:
+    """The trader's public fills over the last `days`, paged.
+
+    `userFills` returns only the most recent page, so the window it covers is set by the
+    venue's cap rather than by the question — which makes any monthly figure derived from it
+    an artefact. This asks for a window instead, and reports whether it reached the end of it.
+    """
+    now = now_ms if now_ms is not None else int(time.time() * 1000)
+    start = now - days * _MS_PER_DAY
+    read: list[Fill] = []
+    complete = False
+    for _ in range(MAX_PAGES):
+        page = _fills_page(address, start, now, client)
+        read.extend(page)
+        if len(page) < PAGE_SIZE:
+            complete = True
+            break
+        start = page[-1].time_ms + 1
+    return FillWindow(fills=tuple(read), days_requested=Decimal(days), complete=complete)
+
+
+def _fills_page(address: str, start_ms: int, end_ms: int, client: httpx.Client) -> list[Fill]:
+    body = _post(
+        {"type": "userFillsByTime", "user": address, "startTime": start_ms, "endTime": end_ms},
+        client,
+    )
+    if not isinstance(body, list):
+        raise VenueUnavailable("userFillsByTime: expected a list of fills")
+    return _as_fills(body, "userFillsByTime")
 
 
 def account_value(address: str, client: httpx.Client) -> Decimal:
