@@ -1,0 +1,36 @@
+[project]
+name = "flet-screening"
+version = "0.1.0"
+description = "Answers whether a trader can be copied by a member of a given ticket size."
+requires-python = ">=3.12"
+# ADR-0002: an HTTP client, never an SDK that can sign. Adding a dependency that
+# can produce a signature breaks this module's first invariant.
+dependencies = ["httpx>=0.27"]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.6", "mypy>=1.11"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/screening"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+# An agent's own working directory is never this module's source, and it may not even be
+# readable — a sandboxed session masks the files inside it.
+extend-exclude = [".claude"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
