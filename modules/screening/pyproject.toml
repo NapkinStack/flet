@@ -7,6 +7,9 @@ requires-python = ">=3.12"
 # can produce a signature breaks this module's first invariant.
 dependencies = ["httpx>=0.27"]
 
+[project.scripts]
+screening = "screening.cli:main"
+
 [dependency-groups]
 dev = ["pytest>=8.3", "ruff>=0.6", "mypy>=1.11"]
 
