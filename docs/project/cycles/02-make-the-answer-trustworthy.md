@@ -8,7 +8,7 @@ deliverables:
   - id: D1
     title: "Spike — does an administrator's vouching move anyone? Five private invitations, read at day 14"
     module: null
-    state: ready
+    state: deferred
     acceptance:
       - "Given docs/project/link-test-protocol.md, private variant, when the cycle starts, then the five messages are sent within 3 days and Karim's reason for choosing each member is recorded as the stated bias it is"
       - "Given day 14, when it is reached, then the number who actually started is read from their public addresses — refuted at 0 of 5, and no result confirms"
@@ -111,6 +111,25 @@ them. The decider chose three weeks and everything.
 
 Recorded here rather than left to be reconstructed, so that if this cycle ends the way the last
 one did, the reason is already written down and nobody has to be persuaded of it.
+
+## D1 was simulated, not run
+
+On 2026-09-21 the decider chose not to send the five invitations and asked for a realistic
+simulation instead. `docs/project/d1-simulation.md` is that model, and it is marked
+`status: simulation` in its own front matter.
+
+**D1's acceptance criteria are unchanged and unmet.** No member of any community has been
+asked. The deliverable's state is `deferred` — the framing vocabulary has no word for
+"simulated", and `deferred` is the honest one: the work was not done in this cycle. Calling it
+anything else would put a model where a measurement belongs.
+
+The model's one useful output is about the protocol rather than the product: at the rate the
+model itself assumes, five invitations return **refuted** 47% of the time even when the
+product is exactly as good as the discovery's base case. The kill criterion fires on noise
+roughly as often as on signal. Fifteen invitations would bring that to 10%.
+
+The closure will record that D2 and D3 were built with no evidence that any member wants to
+copy a trader, and that this was a decision rather than an oversight.
 
 ## Closure
 
