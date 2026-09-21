@@ -1503,3 +1503,56 @@ that much information.
 flet — **6.1% a year** — plus 2.75% a year to the venue. About **9% a year, all in**. Far
 better than the 18–30% the high-turnover traders implied, and a figure that has to be sayable
 out loud to a member.
+
+### Round 3 — the decider fills in the funnel and the cost base, 2026-09-21
+
+Four inputs from the decider, replacing four of the framer's inventions.
+
+1. **Install → active ratio: 15%.** Out of 100 servers that install, 15 have at least one
+   active copier a month later. *The decider's figure, given as a judgement rather than a
+   measurement; the framer's search for a public number returned nothing, twice.* The framer
+   had asked the decider to source it from someone operating a bot — not, as it read, to find
+   someone to build one; the bot is the agent's to write.
+2. **Distribution is not cold.** The decider has contacts to start on an active crypto-trading
+   Discord, and the same for Telegram, and intends to advertise.
+3. **The running cost is near zero.** The application will run on a Hetzner server already
+   paid for by other applications. The decider can carry the costs for months.
+4. **The take stays as decided**: a flat commission, capped at 0.1% (PDR-0001).
+
+**Recomputed on the 15% ratio**, keeping every other assumption of the scenario table above —
+800-member groups, 12% trading perps, 15% trying it, 50% still there, a 2,000 € ticket, the
+measured 5.10× turnover. One active group is 7.2 copiers and **73 €/month**.
+
+| Installs | Active groups | Copiers | Revenue / month | |
+|---|---|---|---|---|
+| 20 | 3.0 | 22 | **220 €** | |
+| 50 | 7.5 | 54 | 551 € | |
+| 100 | 15.0 | 108 | 1,102 € | the unverified Discord ceiling |
+| 150 | 22.5 | 162 | 1,652 € | **above it** |
+| 400 | 60.0 | 432 | 4,406 € | **above it** |
+
+**The stopping rule needs 19 installs.** Twenty active copiers by 31 December is 2.8 active
+groups, which at a 15% ratio is nineteen servers. With warm contacts and advertising, that is
+the easy part of this project — for the third time, from a third direction.
+
+**A correction the framer owes the decider.** The entry above states that the stopping rule
+"can be achieved and still leave the project not working", on the ground that 20 copiers yield
+41–671 €/month against an 8,000 € budget. **With a running cost near zero that framing is too
+harsh.** Break-even is not the 8,000 €; it is the marginal cost of one more month, which is
+about nothing: at 30 €/month of infrastructure the product pays for itself from **three
+installs**. 220 €/month on a shared server that is already paid for is a small profitable
+product, not a failure. What remains true, unchanged: it does not repay three months of the
+decider's half-time work quickly, and a decision about *that* is still owed on a later date.
+
+**The Discord verification is now quantified, and it is the highest-return action available.**
+Capped at 100 servers the ceiling is **1,102 €/month**; at 400 installs it is **4,406 €**. The
+verification is therefore worth about **3,300 €/month** — for a form. It is fifteen minutes
+against every other number in this document.
+
+**And a constraint that has never been read.** The 100-server figure is still *excerpt*: three
+sessions have now failed on Discord's own pages. Telegram may or may not have an equivalent
+ceiling, and the round-2 challenge names a clause in Telegram's Bot Developer Terms §7 —
+TON-only for Mini Apps with crypto or wallet functionality, with a §7.3 multichain carve-out —
+which points directly at this product's onboarding. **Both must be read on the primary source
+by someone who can open them.** The decider can; the agent's sandbox has been refused three
+times.
