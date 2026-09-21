@@ -136,6 +136,15 @@ Candidates for the next framing, in the order the discovery makes them urgent:
   30.0 days and 85.49% — still high, but a measurement of a genuinely hyperactive trader rather
   than an artefact of a cap. When the page limit does stop the read short, the answer says so
   and names its figures as extrapolated.
+- **And the mirror of that defect, found by the same verifier and addressed before merging.**
+  Reading the 30 days correctly still averages over them, so a trader who placed **15,243 fills
+  in two hours** and nothing else reads as `0.17% of their ticket per month` — right about the
+  past, roughly **360× too low** as a forward cost. The first defect over-stated, which errs
+  toward refusing a trader; this one under-stated, **which errs toward `COPYABLE`**. The command
+  now states **how many of the window's days the trader actually traded on**, and names the
+  understatement with its factor when the volume is concentrated. It does not divide by those
+  days — that would swing the bias straight back — it shows both and lets the administrator
+  see a trader who did a month in a day.
 
 ## Closure
 
