@@ -1,7 +1,7 @@
 ---
-decision: clarify           # proposed | go | clarify | kill — the decider decides
+decision: go                # proposed | go | clarify | kill — the decider decides
 decider: "@napkinstack-admin"  # the human who decides, recorded at intake
-decided_on: 2026-09-20      # YYYY-MM-DD, with the decision
+decided_on: 2026-09-21      # YYYY-MM-DD, with the decision
 challenger: "agent session (challenger), 2026-09-20; independent agent session (challenger), 2026-09-21"  # stage 5, one per round
 idea: "docs/project/inputs/idea.md"         # the idea as given, kept in docs/project/inputs/
 round: 3
@@ -1544,10 +1544,24 @@ installs**. 220 €/month on a shared server that is already paid for is a small
 product, not a failure. What remains true, unchanged: it does not repay three months of the
 decider's half-time work quickly, and a decision about *that* is still owed on a later date.
 
-**The Discord verification is now quantified, and it is the highest-return action available.**
-Capped at 100 servers the ceiling is **1,102 €/month**; at 400 installs it is **4,406 €**. The
-verification is therefore worth about **3,300 €/month** — for a form. It is fifteen minutes
-against every other number in this document.
+**The Discord verification is quantified — and the framer's advice about *when* to do it was
+wrong.** Capped at 100 servers the ceiling is **1,102 €/month**; at 400 installs it is
+**4,406 €**, so the verification is worth about **3,300 €/month**. But it is **not fifteen
+minutes tonight**: an app becomes *eligible* at **75 servers** — Discord sends the link then —
+and verification is *required* past **100**. Below 75 there is nothing to submit.
+
+The gate therefore **does not bind before the decider's deadline**: the stopping rule needs
+about 30 installs and the wall is at 75. What is real work, and is on the critical path the
+day the gate opens: verification requires a **live and accurate privacy policy and terms of
+service**, identity verification, and a written justification of each privileged intent. For a
+product that routes financial orders those two documents are not a formality, and they
+intersect the legal question.
+
+**A design constraint that follows, and it must be taken now rather than later:** an app driven
+by **slash commands**, which does not read message content, needs no privileged intent, and its
+verification is materially lighter. *Sources: Discord's own support pages could not be read —
+three sessions, 403 and 404 — so the 75/100 thresholds and the intent rules are* **excerpt**
+*and must be confirmed by someone who can open the developer portal.*
 
 **And a constraint that has never been read.** The 100-server figure is still *excerpt*: three
 sessions have now failed on Discord's own pages. Telegram may or may not have an equivalent
@@ -1556,3 +1570,52 @@ TON-only for Mini Apps with crypto or wallet functionality, with a §7.3 multich
 which points directly at this product's onboarding. **Both must be read on the primary source
 by someone who can open them.** The decider can; the agent's sandbox has been refused three
 times.
+
+### Round 3 — **go**, 2026-09-21, by @napkinstack-admin
+
+The decider closes the discovery and starts the build. The playbook requires a go to say, for
+each objection, **why it does not block**. They are the decider's reasons, drafted by the
+framer and confirmed:
+
+| Objection | Why it does not block |
+|---|---|
+| **The economics are thin** — the central case is the median of a rail where 61 of 284 protocols earn zero | The running cost is near zero on a server already paid for; break-even is three installs. The downside is bounded and written: three months half-time, 8,000 €, and a stopping rule dated 31 December. |
+| **The legal question is unresolved**, and the first favourable impression was given on facts that have since been corrected | Version 3 of the request is sent. PDR-0001's removal condition and the kill threshold both stand. **And the decider has chosen to launch without waiting** — see below. |
+| **The core value claim is untested** after two rounds | The link test runs **in parallel** and costs nothing. If it refutes at day 14, the build stops there. |
+| **The administrator curates for free and performs the act ESMA points at** | The administrator knows and accepts. Recorded; it does not make the exposure disappear, and F5 stays open for every future administrator who is not this one. |
+| **The minimum member ticket, and traders who cannot be copied at small size** | Not a blocker but a **product requirement**: the bot must match traders to the members' ticket. It enters the first cycle. |
+
+**The launch decision, recorded plainly.** The decider chooses to **build and launch without
+waiting for the written opinion**. The framer put the alternatives — launch after the opinion,
+or run on testnet first — and they were declined.
+
+What that means, stated as fact and not as warning: the members are EU residents, the
+instrument is perpetual futures, the operator holds no authorisation, and the central act is
+the one ESMA's briefing points at. If the opinion returns "authorisation required", the
+decider will not be cancelling a plan — they will be unwinding **open positions belonging to
+real people**. That is a different problem from not having launched, and switching off a
+server does not solve it.
+
+What limits the damage is already decided and must not erode: **no custody of funds or of a
+member's main key**, **no promised or advertised returns**, and a key the member can revoke at
+any moment. The framer proposes one addition as a first-cycle deliverable, as a consequence of
+no-go 2 rather than as a new constraint: **an honest notice at onboarding** — the service is
+not authorised, an opinion has been sought and is pending, the instrument is leveraged, and
+the member can lose everything.
+
+**What the first cycle carries**, from this decision:
+
+1. The bot itself: agent-key onboarding, the administrator's curated list, a member copying.
+2. **Matching traders to the member's ticket** — the 10 USDC floor is a product constraint,
+   not a detail.
+3. Position sizing, a leverage ceiling and a kill switch — the agent key cannot take a
+   member's money but can lose it.
+4. The onboarding notice above.
+5. Slash commands only, no message-content intent — so the Discord verification stays light
+   when the 75-server gate opens.
+
+**What this go does not resolve, and is carried forward unresolved:** the written legal
+opinion; Discord's server thresholds and Telegram's §7 clause, all still *excerpt* after three
+sessions; the install-to-active ratio, which is the decider's judgement and not a measurement;
+and PDR-0001's success criterion, which the framer has proposed restating and the decider has
+not yet ruled on.
