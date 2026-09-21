@@ -39,6 +39,15 @@ _CHUNK_LOAD = 2
 #: Capped so that one near-empty chunk cannot overshoot into a range needing many reads.
 _MAX_GROWTH = 16
 
+#: What one chunk may spend before its span is judged wrong rather than the trader busy. A
+#: chunk aimed at half a page should take one read; three covers a rate that tripled between
+#: one chunk and the next.
+_CHUNK_READS = 3
+
+#: How hard an overshooting chunk is cut before the same ground is tried again. Harder than
+#: growth, so a retry converges instead of oscillating.
+_OVERSHOOT_CUT = 8
+
 _MS_PER_DAY = 86_400_000
 
 
@@ -85,6 +94,19 @@ class _Waiting:
             )
         self.retry.sleep(delay)
         self.waits += 1
+
+
+class _Unsteppable(RuntimeError):
+    """`PAGE_SIZE` fills share one millisecond, and the cursor has nowhere to go.
+
+    Private: the read stops where it is and says the window is incomplete, which is a fact
+    about our millisecond-resolution cursor and not about the venue, so it must not surface
+    as a venue outage.
+    """
+
+    def __init__(self, spent: int) -> None:
+        super().__init__(f"{PAGE_SIZE} fills share one millisecond")
+        self.spent = spent
 
 
 class VenueUnavailable(RuntimeError):
@@ -187,12 +209,27 @@ def fills_since(
 
     while end >= asked_from and budget > 0:
         start = max(asked_from, end - chunk_ms + 1)
-        chunk, whole, spent = _read_range(address, start, end, client, waiting, budget)
+        try:
+            chunk, whole, spent = _read_range(
+                address, start, end, client, waiting, min(budget, _CHUNK_READS)
+            )
+        except _Unsteppable as stuck:
+            # Nothing can read past this point without dropping fills. Stop where we are.
+            budget -= stuck.spent
+            break
         budget -= spent
         if not whole:
-            # The chunk ran out of budget part way, so its newest end is missing. Joining it
-            # to what is already held would leave a hole in the middle of the window and no
-            # figure drawn from it would mean anything. Dropped, and the window stops here.
+            # The chunk overshot: its span covers more than a few pages. Its newest end is
+            # missing, so joining it to what is already held would leave a hole in the middle
+            # of the window and no figure drawn from it would mean anything.
+            #
+            # Dropping it and stopping is what spent the whole budget on nothing: a verifier
+            # measured four days held where the previous implementation held twelve, on a
+            # trader with quiet ground in front of a dense stretch. Cut the span and try the
+            # same ground again instead, while there is budget left to try with.
+            if chunk_ms > 1:
+                chunk_ms = max(chunk_ms // _OVERSHOOT_CUT, 1)
+                continue
             break
         held = chunk + held
         covered_from = start
@@ -245,18 +282,23 @@ def _read_range(
     while spent < budget:
         page = _fills_page(address, cursor, end_ms, client, waiting)
         spent += 1
-        read.extend(page)
         if len(page) < PAGE_SIZE:
+            read.extend(page)
             return read, True, spent
         if page[0].time_ms == page[-1].time_ms:
-            # A whole page inside one millisecond. Stepping to the next millisecond would
-            # silently drop whatever else the venue holds at this one, leaving a hole in the
-            # middle of a window reported as contiguous — and every rate drawn across it
-            # would be wrong. No verdict from partial data (AGENTS.md).
-            raise VenueUnavailable(
-                f"userFillsByTime: {PAGE_SIZE} fills share millisecond {page[-1].time_ms}; "
-                "the read cannot step past it without dropping some"
-            )
+            # A whole page inside one millisecond, so there is no boundary to back off to and
+            # no way forward that does not drop whatever else the venue holds there.
+            raise _Unsteppable(spent)
+        if page[-1].time_ms == page[-2].time_ms:
+            # The page ENDS inside a group of fills sharing one millisecond. Stepping to the
+            # next millisecond would drop the rest of that group, leaving a hole in the middle
+            # of a window reported as contiguous — and every rate drawn across it would be
+            # wrong. Step back to the group's start and read it whole on the next page.
+            boundary = page[-1].time_ms
+            read.extend(f for f in page if f.time_ms < boundary)
+            cursor = boundary
+            continue
+        read.extend(page)
         cursor = page[-1].time_ms + 1
     return read, False, spent
 

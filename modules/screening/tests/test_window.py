@@ -131,17 +131,32 @@ def test_a_read_cut_short_by_the_budget_keeps_the_newest_days_not_the_oldest() -
     )
 
 
-def test_what_it_keeps_has_no_hole_in_it() -> None:
-    """A chunk the budget could not finish is missing its newest end. Joining it to the rest
-    would leave a gap, and every rate computed across that gap would be wrong."""
-    series = rising(quiet_per_day=200, busy_per_day=20_000, busy_days=5, days=40)
+def test_a_crowded_millisecond_inside_the_window_leaves_no_hole() -> None:
+    """A page that ENDS inside a group of fills sharing one millisecond used to step to the
+    next millisecond and drop the rest of that group — a silent gap in the middle of a window
+    reported as contiguous. A verifier built this case twice; the second time it lost 1250 of
+    2500 fills, and the guard written for it missed it entirely because that guard only looked
+    at whether the WHOLE page sat in one millisecond."""
+    # Smaller than a page: a page that ends inside it can back off to its start and read it
+    # whole next time. More than a page at one millisecond is a different case, below.
+    clump_at = NOW_MS - 6 * 3600 * 1000
+    series = sorted(
+        [clump_at] * 1500 + list(range(NOW_MS - 2 * DAY_MS, NOW_MS + 1, (2 * DAY_MS) // 3000))
+    )
     client, _ = venue(series)
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
 
     first, last = window.first_fill_ms, window.last_fill_ms
     assert first is not None and last is not None
+    assert first <= clump_at <= last, "the crowded millisecond must be inside what was kept"
     expected = series[bisect.bisect_left(series, first) : bisect.bisect_right(series, last)]
-    assert len(window.fills) == len(expected), "every fill between the two ends must be held"
+    assert len(window.fills) == len(expected), (
+        "every fill between the two ends is held, the crowded millisecond included"
+    )
+    assert sum(1 for f in window.fills if f.time_ms == clump_at) == series.count(clump_at), (
+        "every fill at that millisecond, counted from the series rather than from a constant "
+        "that would quietly encode where the fixture happens to land"
+    )
 
 
 # --- what the read costs ----------------------------------------------------------------
@@ -209,16 +224,36 @@ def test_a_chunk_the_budget_cannot_finish_is_dropped_whole() -> None:
     )
 
 
-def test_it_refuses_rather_than_stepping_over_a_page_inside_one_millisecond() -> None:
-    """Paging advances to the last fill's millisecond plus one. If a full page sits inside a
-    single millisecond, whatever else the venue holds at that millisecond is skipped, and the
-    gap lands in the middle of a window reported as contiguous. No verdict from partial data."""
-    # The far edge of the window, where the last chunk necessarily starts.
-    crowded = [NOW_MS - 30 * DAY_MS] * (PAGE_SIZE + 500)
+def test_a_page_wholly_inside_one_millisecond_stops_the_read_without_blaming_the_venue() -> None:
+    """More than a page of fills at one millisecond leaves the cursor nowhere to go: it cannot
+    step past without dropping some, and there is no earlier boundary to back off to. The read
+    stops there and says the window is incomplete.
+
+    It must NOT report a venue outage. That would be false — the venue answered every call —
+    and it would throw away the recent days already in hand, which are the ones the question
+    is about."""
+    crowded = [NOW_MS - 20 * DAY_MS] * (PAGE_SIZE + 500)
     recent = list(range(NOW_MS - 2 * DAY_MS, NOW_MS + 1, (2 * DAY_MS) // 3000))
     client, _ = venue(sorted(crowded + recent))
-    with pytest.raises(VenueUnavailable, match="share millisecond"):
-        fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.complete is False, "it could not reach the far edge, and must say so"
+    assert window.last_fill_ms is not None
+    assert window.last_fill_ms >= NOW_MS - DAY_MS, "what it did reach still ends at the run"
+
+
+def test_a_page_exactly_filled_by_one_millisecond_does_not_cost_the_whole_answer() -> None:
+    """Exactly `PAGE_SIZE` fills at one millisecond, with nothing more there: stepping past
+    would drop nothing. We cannot tell that from the venue's answer, so the read stops — but
+    stopping must cost only the ground beyond, never the command."""
+    crowded = [NOW_MS - 20 * DAY_MS] * PAGE_SIZE
+    recent = list(range(NOW_MS - 2 * DAY_MS, NOW_MS + 1, (2 * DAY_MS) // 3000))
+    client, _ = venue(sorted(crowded + recent))
+
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+    assert window.fills, "the recent days are still answered"
+    assert window.last_fill_ms is not None
+    assert window.last_fill_ms >= NOW_MS - DAY_MS
 
 
 # --- what the window reports --------------------------------------------------------------
@@ -271,3 +306,28 @@ def test_a_chunk_that_overran_cuts_the_next_one_back() -> None:
     assert window.complete is True, "the month still fits once the brake is applied"
     assert window.calendar_days == 30
     assert len(heavy(calls)) < MAX_PAGES, "and it is not paid for with the whole budget"
+
+
+def test_an_overshooting_chunk_is_cut_and_the_same_ground_tried_again() -> None:
+    """Growth needs a way back. A trader with quiet ground in front of a dense stretch makes
+    the chunks grow, and one then lands on the dense part and cannot be finished. Ending the
+    read there spends the whole remaining budget on nothing: a verifier measured four days
+    held where the implementation being replaced held twelve.
+
+    The span is cut and the same ground is tried again instead."""
+    front = list(range(NOW_MS - 2 * DAY_MS, NOW_MS + 1, (2 * DAY_MS) // 3000))
+    quiet = list(range(NOW_MS - 11 * DAY_MS, NOW_MS - 2 * DAY_MS, DAY_MS // 10))
+    wall_at = NOW_MS - 12 * DAY_MS
+    wall = list(range(wall_at, wall_at + 120_000, 2))
+    client, calls = venue(sorted(front + quiet + wall))
+
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+
+    assert window.complete is False, "the wall is not readable inside the budget"
+    assert window.calendar_days >= 9, (
+        "but the quiet ground in front of it is, and must not be thrown away with the chunk "
+        "that overshot — without the retry this holds about four days"
+    )
+    assert window.last_fill_ms is not None
+    assert window.last_fill_ms >= NOW_MS - DAY_MS, "and what is held still ends at the run"
+    assert len(heavy(calls)) <= MAX_PAGES
