@@ -104,9 +104,9 @@ def main(
         # reads the code and never sees a sentence would record "this trader cannot be
         # copied" because of a typo in its own command line. A malformed invocation is the
         # same thing as an unreadable venue: no verdict.
-        if exit_code.code not in (0, None):
-            return EXIT_NO_VERDICT
-        raise
+        # `--help` exits 0 and has already printed. Returning it keeps `main` total, which
+        # matters because the copying module will consume this through a contract.
+        return EXIT_NO_VERDICT if exit_code.code not in (0, None) else EXIT_COPYABLE
     try:
         ticket = Decimal(args.ticket)
     except InvalidOperation:
@@ -139,10 +139,11 @@ def main(
             window_complete=window.complete,
             window_asked_days=window.days_requested,
         )
-    except (ValueError, ArithmeticError) as error:
-        # ArithmeticError catches decimal's InvalidOperation: `--ticket nan` used to escape as
-        # an uncaught exception, which Python exits 1 for — and 1 now means COPYABLE WITH
-        # RESERVATIONS. A crash must never read as a qualified yes.
+    except ValueError as error:
+        # `ArithmeticError` was caught here too, as a second guard against `--ticket nan`
+        # reaching `assess`. `is_finite()` above already stops every case, so the branch was
+        # unreachable — and an untested brace is not belt and braces, it is a line nobody can
+        # show is doing anything.
         print(f"no verdict: {error}", file=sys.stderr)
         return EXIT_NO_VERDICT
 

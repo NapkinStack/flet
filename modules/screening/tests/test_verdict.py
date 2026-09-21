@@ -362,3 +362,31 @@ def test_days_traded_is_clamped_to_the_window_it_is_counted_against() -> None:
     )
     assert v.days_traded <= v.calendar_days, "an impossible sentence, and it was printed"
     assert f"{v.days_traded} of the {v.calendar_days}" in " ".join(v.reasons)
+
+
+def test_the_reservations_come_out_in_the_order_the_decision_fixes() -> None:
+    """`all are named, in the order fees, reproducibility, concentration` (PDR-0002), plus
+    extrapolation from the amendment. Swapping two of them, or moving fees to the end, left
+    all sixty-five tests green — and the test named for the first line was satisfied by any
+    order, because its fixture tripped only one reservation."""
+    from screening.verdict import _reservations
+
+    assert _reservations(
+        monthly_fee_burden=Decimal("0.9"),
+        unreproducible_share=Decimal("0.9"),
+        days_traded=1,
+        calendar_days=30,
+        stretch=Decimal(20),
+    ) == ("fees", "reproducibility", "concentration", "extrapolation")
+
+
+def test_the_floor_boundary_is_the_coverage_target_exactly() -> None:
+    """D3 made this line the sole gate for `NOT COPYABLE` and for exit 2, and nothing pinned
+    which side of it exactly-20%-refused falls on."""
+    trader_account, ticket = Decimal(100_000), Decimal(1_000)
+    # scale 1/100: a 900 notional becomes 9 USDC (refused), a 2000 becomes 20 (placed)
+    at_target = spread([fill("900")] * 2 + [fill("2000")] * 8)
+    assert assess(at_target, trader_account=trader_account, ticket=ticket).copyable is True
+
+    past = spread([fill("900")] * 3 + [fill("2000")] * 7)
+    assert assess(past, trader_account=trader_account, ticket=ticket).copyable is False

@@ -214,17 +214,29 @@ def test_a_window_stretched_past_the_ceiling_gives_no_verdict_through_the_comman
     assert code == 3, "past the ceiling there is no verdict, not a weak one"
 
 
-def test_the_floor_still_decides_even_when_the_window_is_hopeless(
+def test_no_verdict_outranks_every_verdict_including_not_copyable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """`the floor alone decides NOT COPYABLE` (PDR-0002). Whether the orders clear 10 USDC is
-    read straight off the notionals and needs no extrapolation, so the ceiling must not
-    pre-empt it."""
+    """An earlier version of this branch let the floor win over the ceiling, reasoning that
+    whether orders clear 10 USDC is read straight off the notionals. The reasoning was wrong:
+    those notionals are the ones inside the window we actually got, so `refused_share` and
+    `minimum_ticket` become inferences from half an hour printed as facts about a trader.
+
+    A verifier measured what it produced — `NOT COPYABLE` above
+    `8352.24% of their ticket per month in fees`, `extrapolated ... by a factor of 823.3` —
+    which is precisely what the amendment's success criterion says must never be shown."""
     series = list(range(NOW_MS - 3 * 3600 * 1000, NOW_MS + 1, 90))
     code = main([ADDRESS, "--ticket", "1"], client=dense_venue(series, account="1000000"))
 
-    assert capsys.readouterr().out.splitlines()[0].startswith("NOT COPYABLE")
-    assert code == 2, "impossible beats unmeasurable, as it beats expensive"
+    assert capsys.readouterr().out == "", "no verdict prints no verdict, not a refusal"
+    assert code == 3, "the ceiling is reached before any verdict is formed"
+
+
+def test_help_returns_rather_than_escaping(capsys: pytest.CaptureFixture[str]) -> None:
+    """`main` is typed `-> int` and the copying module will consume it through a contract.
+    `--help` raised SystemExit through it."""
+    assert main(["--help"]) == 0
+    assert "--ticket" in capsys.readouterr().out
 
 
 def test_a_malformed_command_line_is_no_verdict_not_a_verdict(

@@ -88,19 +88,23 @@ def assess(
 
     # A cut-short window is stretched to a month. Past a point that stops being a
     # measurement: live, a read of 2.4 hours was extrapolated by 319 while seventeen of
-    # twenty reads went unused. The command may not dress a guess as an answer (PDR-0002,
-    # amended 2026-09-21).
+    # twenty reads went unused (PDR-0002, amended 2026-09-21).
     #
-    # The floor is checked first and wins. Whether the orders clear 10 USDC is read straight
-    # off the notionals and needs no extrapolation at all, and the PDR says the floor alone
-    # decides NOT COPYABLE. Refusing to answer a question we can answer from the data in hand
-    # would be the ceiling overreaching.
+    # This is checked BEFORE any verdict is formed, and outranks all three of them. An
+    # earlier version of this branch let the floor win, on the reasoning that whether orders
+    # clear 10 USDC is read straight off the notionals. That reasoning was wrong: the
+    # notionals read are the ones in the window we actually got, so `refused_share` and
+    # `minimum_ticket` are inferences from half an hour printed as facts about a trader —
+    # the exact move the amendment forbids. It also showed administrators monthly figures
+    # stretched by 823x and 2158x, which the amendment's own success criterion says must
+    # never happen. `NO VERDICT` is the most severe outcome and it is reached first.
     asked = window_asked_days if window_asked_days is not None else days
     stretch = (asked / span) if (not window_complete and span > 0) else Decimal(1)
-    if copyable and stretch > EXTRAPOLATION_CEILING:
+    if stretch > EXTRAPOLATION_CEILING:
         raise ValueError(
-            f"the venue returned {span:.2f} days of a {asked:.0f}-day window: stretching "
-            f"that to a month multiplies it by {stretch:.1f}, which is a guess, not a figure"
+            f"the venue returned {span:.2f} days of a {asked:.0f}-day window: a month "
+            f"inferred from that is stretched more than {EXTRAPOLATION_CEILING:.0f} times, "
+            "which is a guess, not a figure"
         )
 
     reservations = _reservations(
@@ -164,7 +168,7 @@ def _reservations(
         named.append("fees")
     if unreproducible_share > UNREPRODUCIBLE_ALERT:
         named.append("reproducibility")
-    if calendar_days > 0 and Decimal(days_traded) / Decimal(calendar_days) <= CONCENTRATION_ALERT:
+    if Decimal(days_traded) / Decimal(calendar_days) <= CONCENTRATION_ALERT:
         named.append("concentration")
     if stretch > EXTRAPOLATION_ALERT:
         named.append("extrapolation")

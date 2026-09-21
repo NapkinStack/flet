@@ -227,6 +227,26 @@ Sampled live on 2026-09-21: a trader whose thirty days fit is stretched by 1× a
 nothing; the densest trader in the test set reads about 2 days and is stretched by ~15, which
 is a reservation; the 2.4-hour case is refused.
 
+### The ceiling outranks every verdict, the floor included
+
+Written because the framer read *"the floor alone decides `NOT COPYABLE`"* as *"the floor
+outranks `NO VERDICT`"*, built that, and a verifier measured what it produced: `NOT COPYABLE`
+printed above `8352.24% of their ticket per month in fees`, `extrapolated ... by a factor of
+823.3`. The success criterion three paragraphs above says no administrator is ever shown a
+figure stretched past 30×, and that change violated it within the hour.
+
+So, explicitly: **the ceiling is checked before any verdict is formed.** `NO VERDICT` is the
+most severe outcome and the exit codes already say so.
+
+*"The floor alone decides `NOT COPYABLE`"* means nothing **other than** the floor may produce
+that verdict. It is not a statement of precedence over the absence of one.
+
+And the reasoning that seemed to justify the reorder — *the floor is read straight off the
+notionals and needs no extrapolation* — is false. The notionals read are the ones inside the
+window that was actually returned, so `refused_share` and `minimum_ticket` computed from half
+an hour are inferences presented as facts about a trader: the same move this amendment forbids
+one section earlier.
+
 ### Which window's days concentration counts against
 
 Raised in verification, and settled here because the wording above did not settle it.
