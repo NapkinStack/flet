@@ -112,6 +112,24 @@ them. The decider chose three weeks and everything.
 Recorded here rather than left to be reconstructed, so that if this cycle ends the way the last
 one did, the reason is already written down and nobody has to be persuaded of it.
 
+## D1 has a declarative answer, and it is short of the charter
+
+On 2026-09-21, after the simulation below was written, the decider reported **10 traders and
+20 members** who have said they want to test the bot. The conversations are private and were
+not disclosed; the result is *reported*, not observed. `pilot-faq.md` carries the exchanges
+the decider confirms are representative of them.
+
+**This answers D1's question and fails D1's criteria.** "Does an administrator's vouching move
+anyone?" — yes, thirty people said so, which is more than nothing and more than this project
+had an hour earlier. But D1 counts who **acts**, read from public addresses, and nobody has
+acted: the members are waiting for the bot rather than mirroring a trader by hand. D1 stays
+`deferred`.
+
+The useful finding is arithmetic and it is now a blocking question on the charter: twenty
+interested members yield **3.5 to 8.4** still copying at day 30, against a threshold of
+**20**. The pool needed is 48 to 114. The ten traders are ample; the entire shortfall is on
+the member side.
+
 ## D1 was simulated, not run
 
 On 2026-09-21 the decider chose not to send the five invitations and asked for a realistic
