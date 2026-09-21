@@ -49,8 +49,8 @@ def _parser() -> argparse.ArgumentParser:
 def _render(address: str, verdict: Verdict, window: FillWindow) -> str:
     head = "COPYABLE" if verdict.copyable else "NOT COPYABLE"
     # The dates of the fills actually held, never the range that was requested.
-    held_from = _date(window.first_fill_ms) if window.first_fill_ms else "?"
-    held_to = _date(window.last_fill_ms) if window.last_fill_ms else "?"
+    held_from = _date(window.first_fill_ms) if window.first_fill_ms is not None else "?"
+    held_to = _date(window.last_fill_ms) if window.last_fill_ms is not None else "?"
     window_label = (
         f"{held_from} to {held_to}"
         if window.complete

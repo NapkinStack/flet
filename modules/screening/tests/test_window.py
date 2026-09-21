@@ -154,13 +154,71 @@ def test_it_never_exceeds_the_read_budget() -> None:
     assert window.reads == len(heavy(calls)), "and the answer states what it actually spent"
 
 
-def test_a_dense_trader_costs_far_fewer_reads_than_the_ceiling_when_the_window_fits() -> None:
-    """Chunks are sized from the measured rate, so a trader whose 30 days do fit is read in
-    roughly the number of pages their fills occupy — not in twenty reads regardless."""
-    client, calls = venue(evenly(per_day=200, days=40))
+def test_a_trader_whose_month_fits_is_read_in_a_few_reads_not_the_whole_budget() -> None:
+    """Chunks aim at half a page, so a complete read costs about twice the pages the fills
+    occupy — a bounded multiple, not the ceiling regardless."""
+    series = evenly(per_day=200, days=40)
+    client, calls = venue(series)
     window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
     assert window.complete is True
-    assert len(heavy(calls)) <= MAX_PAGES
+    pages_the_fills_occupy = -(-(30 * 200) // PAGE_SIZE)
+    assert len(heavy(calls)) <= 2 * pages_the_fills_occupy + 2, (
+        "the name of this test used to promise 'far fewer' while asserting only 'not more "
+        "than twenty', which is not a claim about anything"
+    )
+
+
+def test_a_quiet_month_behind_a_busy_week_is_still_read_whole() -> None:
+    """The probe measures the trader's NEWEST fills, which for anyone with a burst is the
+    densest stretch of their month. Cutting every chunk to that step walks the quiet weeks in
+    spike-sized paces and spends the budget on hours: a verifier measured 0.07 of a day
+    returned where the previous implementation returned all thirty. Chunks grow when one
+    comes back near-empty, which is what leaves the burst behind."""
+    burst = list(range(NOW_MS - 10 * 60 * 1000, NOW_MS + 1, (10 * 60 * 1000) // 2000))
+    series = sorted(evenly(per_day=50, days=40) + burst)
+    client, calls = venue(series)
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+
+    assert window.complete is True, "thirty days of a mostly quiet trader must fit"
+    assert window.calendar_days == 30, "and all thirty must actually be held"
+    assert len(heavy(calls)) < MAX_PAGES, "without spending the whole budget to get there"
+
+
+def test_a_chunk_the_budget_cannot_finish_is_dropped_whole() -> None:
+    """The branch that carries the no-hole invariant. A wall of fills behind quiet ground:
+    chunks grow across the quiet part, then one lands on the wall, cannot be finished inside
+    what is left of the budget, and must be dropped rather than joined with a gap in it."""
+    # Busy enough at the front that the probe fills, then quiet ground so the chunks grow,
+    # then a wall far enough back that a grown chunk lands on it with little budget left.
+    front = list(range(NOW_MS - 2 * DAY_MS, NOW_MS + 1, (2 * DAY_MS) // 3000))
+    quiet = list(range(NOW_MS - 10 * DAY_MS, NOW_MS - 2 * DAY_MS, DAY_MS // 10))
+    wall_at = NOW_MS - 12 * DAY_MS
+    wall = list(range(wall_at, wall_at + 200_000, 2))
+    series = sorted(front + quiet + wall)
+    client, _ = venue(series)
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+
+    first, last = window.first_fill_ms, window.last_fill_ms
+    assert first is not None and last is not None
+    assert window.complete is False
+    assert last >= NOW_MS - DAY_MS, "and what survives still ends at the run"
+    expected = series[bisect.bisect_left(series, first) : bisect.bisect_right(series, last)]
+    assert len(window.fills) == len(expected), (
+        "every fill between the two ends is held: the unfinished chunk was dropped, not "
+        "joined with a hole in the middle"
+    )
+
+
+def test_it_refuses_rather_than_stepping_over_a_page_inside_one_millisecond() -> None:
+    """Paging advances to the last fill's millisecond plus one. If a full page sits inside a
+    single millisecond, whatever else the venue holds at that millisecond is skipped, and the
+    gap lands in the middle of a window reported as contiguous. No verdict from partial data."""
+    # The far edge of the window, where the last chunk necessarily starts.
+    crowded = [NOW_MS - 30 * DAY_MS] * (PAGE_SIZE + 500)
+    recent = list(range(NOW_MS - 2 * DAY_MS, NOW_MS + 1, (2 * DAY_MS) // 3000))
+    client, _ = venue(sorted(crowded + recent))
+    with pytest.raises(VenueUnavailable, match="share millisecond"):
+        fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
 
 
 # --- what the window reports --------------------------------------------------------------
@@ -197,3 +255,19 @@ def test_it_says_so_when_a_page_cannot_be_read() -> None:
 
     with pytest.raises(VenueUnavailable):
         fills_since(ADDRESS, days=30, client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_a_chunk_that_overran_cuts_the_next_one_back() -> None:
+    """Growth has to have a brake. A chunk that grew across quiet ground and then needed
+    several reads to clear a busy patch must not hand the same span to the next chunk, or one
+    dense stretch turns every later read into a multi-page one."""
+    front = list(range(NOW_MS - 2 * DAY_MS, NOW_MS + 1, (2 * DAY_MS) // 3000))
+    quiet = list(range(NOW_MS - 30 * DAY_MS, NOW_MS - 2 * DAY_MS, DAY_MS // 10))
+    patch_at = NOW_MS - 11 * DAY_MS
+    patch = list(range(patch_at, patch_at + 50_000, 10))
+    client, calls = venue(sorted(front + quiet + patch))
+    window = fills_since(ADDRESS, days=30, client=client, now_ms=NOW_MS)
+
+    assert window.complete is True, "the month still fits once the brake is applied"
+    assert window.calendar_days == 30
+    assert len(heavy(calls)) < MAX_PAGES, "and it is not paid for with the whole budget"

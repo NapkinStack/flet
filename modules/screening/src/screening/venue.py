@@ -29,10 +29,15 @@ PAGE_SIZE = 2000
 #: `FillWindow.complete` is how the answer says so.
 MAX_PAGES = 20
 
-#: Chunks are sized from the measured rate to come back about this fraction of a page full.
-#: The headroom is what lets a trader's rate rise between the probe and the read without
-#: costing a second heavy read per chunk.
+#: Chunks are sized to come back about this fraction of a page full. The headroom is what
+#: lets a trader's rate rise between one chunk and the next without costing a second read.
 _CHUNK_LOAD = 2
+
+#: How much a chunk may grow in one step. The probe measures the trader's *newest* fills,
+#: which for anyone with a recent burst is the densest stretch of their month — so the first
+#: chunk is cut for the spike, and without growth the whole window is walked at that step.
+#: Capped so that one near-empty chunk cannot overshoot into a range needing many reads.
+_MAX_GROWTH = 16
 
 _MS_PER_DAY = 86_400_000
 
@@ -192,6 +197,7 @@ def fills_since(
         held = chunk + held
         covered_from = start
         end = start - 1
+        chunk_ms = _resize(chunk_ms, len(chunk), spent)
 
     return FillWindow(
         tuple(held),
@@ -202,6 +208,22 @@ def fills_since(
         waiting.waits,
         MAX_PAGES - budget,
     )
+
+
+def _resize(chunk_ms: int, got: int, spent: int) -> int:
+    """The next chunk's span, from what this one actually held.
+
+    A chunk that came back near-empty means the read has walked past the burst the probe
+    measured and is now crossing quiet ground at a step cut for the spike — which is how a
+    budget gets spent on hours. A chunk that needed more than one read means the opposite,
+    and is cut back by what it overran.
+    """
+    if spent > 1:
+        return max(chunk_ms // spent, 1)
+    target = PAGE_SIZE // _CHUNK_LOAD
+    if got >= target:
+        return chunk_ms
+    return chunk_ms * min(_MAX_GROWTH, max(2, target // max(got, 1)))
 
 
 def _read_range(
@@ -226,6 +248,15 @@ def _read_range(
         read.extend(page)
         if len(page) < PAGE_SIZE:
             return read, True, spent
+        if page[0].time_ms == page[-1].time_ms:
+            # A whole page inside one millisecond. Stepping to the next millisecond would
+            # silently drop whatever else the venue holds at this one, leaving a hole in the
+            # middle of a window reported as contiguous — and every rate drawn across it
+            # would be wrong. No verdict from partial data (AGENTS.md).
+            raise VenueUnavailable(
+                f"userFillsByTime: {PAGE_SIZE} fills share millisecond {page[-1].time_ms}; "
+                "the read cannot step past it without dropping some"
+            )
         cursor = page[-1].time_ms + 1
     return read, False, spent
 

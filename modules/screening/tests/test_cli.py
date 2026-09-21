@@ -100,3 +100,13 @@ def test_it_never_calls_an_incomplete_answer_complete(capsys: pytest.CaptureFixt
     out = capsys.readouterr().out.lower()
     assert "slow down 1 time" in out, "the throttling is reported"
     assert "complete" not in out, "and nothing claims completeness it does not have"
+
+
+def test_it_states_what_the_read_cost_the_venue(capsys: pytest.CaptureFixture[str]) -> None:
+    """The venue meters by weight. A cost the administrator cannot see is a cost nobody is
+    watching, and D2's second acceptance criterion asks for it in so many words."""
+    rows = [a_fill("2000", day) for day in range(0, 30)]
+    main([ADDRESS, "--ticket", "2000"], client=venue(rows, "20000"))
+    out = capsys.readouterr().out
+    assert "heavy read(s)" in out, "the number of heavy reads must be stated"
+    assert "0 heavy read(s)" in out, "and this trader fits in the cheap probe, so it is zero"
