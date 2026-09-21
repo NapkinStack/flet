@@ -153,9 +153,45 @@ The risks themselves:
 
 ## Open questions
 
-**Blocking:** none once this charter is accepted. The two questions below must be answered by
-the decider *in accepting it*: the **criticality** (`critical` proposed) and **success
-criterion 2** (the 500 € restatement proposed for PDR-0001).
+**Blocking, raised 2026-09-21: success criterion 1 is out of reach with the pool that
+exists, and the arithmetic says so before the deadline does.**
+
+The decider reports **10 traders and 20 members** who have said they want to test the bot
+(*reported*; the conversations are private and were not disclosed — see
+`pilot-faq.md`). It is the first demand signal this project has had, and it is not enough.
+
+Between "said yes" and "still copying at day 30" there are two steps that lose people:
+
+```
+20 members interested
+  x 35-60 %   actually connect and place a first copied order
+  x 50-70 %   are still copying at day 30
+  ---------
+  = 3.5 to 8.4 members        criterion 1 requires 20
+```
+
+**Even the optimistic end is 2.4x short.** Reaching 20 at day 30 needs **48 to 114 interested
+members** at the top of the funnel, not 20. The same arithmetic on criterion 2: eight copiers
+at a 1,500 € ticket and the measured turnover band yield about **60 €/month** against the
+500 € threshold; roughly sixty copiers would be needed.
+
+The ten traders are not the constraint — curation is a short list and the supply side is
+solved. The whole shortfall is on the member side.
+
+Two ways out, and this is the decider's:
+
+1. **Widen before launching** — aim at 60-80 interested members, which probably means a second
+   community. The product has been multi-community since the discovery, so this is coherent
+   rather than a change of plan.
+2. **Restate criterion 1** with the figures now in hand, in writing. 20 was set before there
+   was any data; revising a threshold *because* data arrived is not cheating. Hiding that it
+   was revised would be.
+
+What the framer does not recommend: launching against 20 and discovering on 2026-12-31 that it
+was arithmetically unreachable from the first day.
+
+**Previously blocking, answered when this charter was accepted:** the **criticality**
+(`critical`) and **success criterion 2** (the 500 € restatement proposed for PDR-0001).
 
 **Not blocking:**
 
