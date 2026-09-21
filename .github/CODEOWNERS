@@ -17,3 +17,4 @@
 /contracts/                    @NapkinStack/maintainers
 
 # Modules — one line per module, added by the scaffolding.
+/modules/screening/            @NapkinStack/maintainers
