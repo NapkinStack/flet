@@ -1454,3 +1454,52 @@ in it:
 At the measured 5.10× turnover that needs about 98,000 € of member capital under copy — 20
 members at 4,900 €, or 65 at 1,500 €. Reachable, and still meaningful. **Awaiting the
 decider's word before the PDR is amended.**
+
+### Round 3 — the estimate the decider asked for, with serious marketing, 2026-09-21
+
+The decider asks for plausible values rather than waiting for the real ones, on the premise
+that the bot will be **marketed seriously into established, serious Discord and Telegram
+groups**. Delivered on one condition, stated because this document has already been burned
+once: **what is measured is marked measured, what the framer invents is marked invented.**
+
+> **A point the premise does not change.** Marketing acts on the top of the funnel — more
+> groups, better groups. It changes neither the traders' turnover, nor the 0.1% cap, nor the
+> 10 USDC floor. The unit economics is where the problem was, and marketing does not reach it.
+
+| Scenario | Groups | Members / group | Trade perps | Try it | Still there | Active copiers | Ticket | **Revenue / month** |
+|---|---|---|---|---|---|---|---|---|
+| prudent | 10 | 500 | 8% | 10% | 45% | 18 | 1,200 € | **44 €** |
+| central | 30 | 800 | 12% | 15% | 50% | 216 | 2,000 € | **2,203 €** |
+| ambitious | 80 | 1,200 | 15% | 20% | 55% | 1,584 | 3,000 € | **24,235 €** |
+
+**Measured in this session:** the turnover (2.06× for copyable traders, 5.10× once matched to
+the member's ticket), the 0.1% cap, the 10 USDC floor, the on-rail revenue distribution.
+**Estimated by the framer, and nothing else:** the number of groups, their size, the share who
+trade perps, the share who try it, retention, and the ticket.
+
+**Three readings.**
+
+1. **The decider's stopping rule is reachable.** Twenty active copiers needs **2.8 groups** in
+   the central case, 11 in the prudent one. 31 December is not a stretch — it is the easy part.
+2. **And reaching it says almost nothing about money.** At the moment the rule says *continue*,
+   the revenue is between **49 € and 306 €** a month. This is the same finding as the stopping
+   rule's own entry above, arrived at from the other direction.
+3. **The central scenario lands on the median of the rail.** 2,203 €/month against a measured
+   median of **$2,436** across the 284 builder-code protocols on this venue — of which 61 earn
+   exactly zero. The framer's "central" case therefore describes a **typical** outcome, neither
+   a failure nor a success. The scenario that makes this a business is the ambitious one, and
+   all four of its inputs are the framer's.
+
+**The single lever.** The spread between prudent and ambitious is a factor of **550** — that
+is a range of opinion, not a forecast. One term dominates it: **active copiers per group, 1.8
+against 19.8, a factor of 11.** Group count moves it 8×, ticket 2.5×, turnover 2.5×.
+
+That term is exactly what the **link test measures**, and the protocol is written:
+`docs/project/link-test-protocol.md`, with its thresholds fixed before the test runs. One real
+number replaces a factor of 11 with a factor of 2. No other action available today carries
+that much information.
+
+**What the member pays, at the matched turnover of 5.10×:** 0.51% of their capital a month to
+flet — **6.1% a year** — plus 2.75% a year to the venue. About **9% a year, all in**. Far
+better than the 18–30% the high-turnover traders implied, and a figure that has to be sayable
+out loud to a member.
