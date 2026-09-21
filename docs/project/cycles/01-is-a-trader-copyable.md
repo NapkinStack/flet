@@ -1,6 +1,6 @@
 ---
 goal: "An administrator can tell whether a trader is copyable by their members, and Karim's community has been asked whether vouching moves anyone"
-status: accepted
+status: stopped
 appetite_weeks: 2
 start: 2026-09-21
 end: 2026-10-05
@@ -24,13 +24,15 @@ deliverables:
   - id: D3
     title: "An administrator asks whether a trader is copyable for a given member ticket, and gets a grounded answer"
     module: screening
-    state: in-progress
+    state: deferred
     acceptance:
       - "Given a trader's public address and a member ticket in euros, when the administrator runs the command, then the answer states whether the trader is copyable and why, from that trader's real fills"
       - "Given a trader whose typical order falls under 10 USDC once scaled to the ticket, when the command runs, then it is reported as not copyable at that ticket, with the share of orders that would be refused"
       - "Given a trader whose monthly turnover would cost the member more than 5% of their capital in fees, when the command runs, then that cost is stated as a percentage per month, not hidden behind a verdict"
       - "Given a trader who posts more liquidity than they take, when the command runs, then the share of their fills a copier could not reproduce is stated"
       - "Given the venue's public API is unreachable, when the command runs, then it says so and returns no verdict, rather than a verdict from stale or partial data"
+outcome: reframed
+ended_on: 2026-09-21
 ---
 
 # Cycle 01 — Is a trader copyable?
@@ -109,7 +111,162 @@ Candidates for the next framing, in the order the discovery makes them urgent:
   count falls back to self-declaration and drops a grade if they will not.
 - The written legal opinion, still pending, and the decision to launch without it — neither
   bears on this cycle, which touches no money.
+- **Found by running D3 against the live venue, 2026-09-21.** Two real traders come back
+  `COPYABLE` while costing the member **14.31%** and **5.64%** of their ticket per month in
+  fees. The acceptance criteria are met — the cost is stated and not hidden — but the one-word
+  headline still reads as approval. An independent verifier raised the same thing from the
+  other side: `copyable` rests on **one** of the four measurements, so a trader can be
+  `COPYABLE` with 70% of their fills unreproducible. **Not changed in this cycle**: it moves an
+  accepted acceptance criterion, which is the decider's to do.
+- **Also found by running it:** the public leaderboard and the live account state disagree.
+  Several leaderboard accounts now hold nothing, and the command correctly returns no verdict
+  for them. The module reads the live state, which is the right source; the leaderboard is a
+  snapshot, and the discovery's figures inherit that.
+- **Raised by the verifier, and both are real.** The fee burden is computed on the trader's
+  **whole** volume, including the fills a copier cannot reproduce — so it errs *pessimistic* on
+  fees inside the same verdict that says that volume is unreachable, while the fee *tier* errs
+  optimistic. Two unbounded biases in opposite directions. And the cycle says "5% of their
+  **capital**" where the code computes a share of the **ticket**; they coincide only when the
+  ticket is the member's whole allocation. **Words to settle before the command states them to
+  an administrator.**
+- **`days_observed` was unbounded — found, then fixed before merging.** The venue returns at
+  most 2,000 fills per call, so the observation window was whatever that cap covered, and the
+  monthly figures were extrapolated from it. The second verifier showed this is the **normal
+  path for any active trader**, not an edge case: one real trader read 2,000 fills over 0.6
+  days and was told his copier would pay **1,371% of their ticket per month**. Fixed by paging
+  `userFillsByTime` over a requested 30-day window; the same trader now reads 8,186 fills over
+  30.0 days and 85.49% — still high, but a measurement of a genuinely hyperactive trader rather
+  than an artefact of a cap. When the page limit does stop the read short, the answer says so
+  and names its figures as extrapolated.
+- **And the mirror of that defect, found by the same verifier and addressed before merging.**
+  Reading the 30 days correctly still averages over them, so a trader who placed **15,243 fills
+  in two hours** and nothing else reads as `0.17% of their ticket per month` — right about the
+  past, roughly **360× too low** as a forward cost. The first defect over-stated, which errs
+  toward refusing a trader; this one under-stated, **which errs toward `COPYABLE`**. The command
+  now states **how many of the window's days the trader actually traded on**, and names the
+  understatement with its factor when the volume is concentrated. It does not divide by those
+  days — that would swing the bias straight back — it shows both and lets the administrator
+  see a trader who did a month in a day.
 
 ## Closure
 
-<Written at the end of the cycle.>
+**Stopped early, by the decider, on 2026-09-21 — six days into a two-week appetite.**
+
+## What was delivered
+
+**Nothing was accepted.** All three deliverables leave this cycle unaccepted, and it is worth
+being exact about why, because the three reasons are different.
+
+**D1 — the link test: not started.** The administrator's post was never made. It needs one
+Discord message and thirty days, and its thirty days have not begun.
+
+**D2 — what Discord and Telegram allow: not started.** Two web pages. Three agent sessions were
+refused by them (403, 404); the decider can open them logged in.
+
+**D3 — the copyability answer: built, verified five times, not accepted.** The code exists on
+`d3/the-command` and works for most traders. It fails scenario **S8** for sustained market
+makers: when even the narrowed window overflows the venue's page cap, the read keeps the
+**stale front** and issues a verdict from data that ended eleven days before the question. A
+verifier that had never touched the branch found it twice, on two heads, and refused to sign.
+Independently of S8, three of D3's five acceptance criteria are covered by tests but **named by
+no scenario** — a fully green sheet would not have demonstrated them either.
+
+## Which success criteria moved
+
+**Neither.** The charter's first criterion — twenty members still copying at day 30, on
+2026-12-31 — depends entirely on D1, which has not started. Its second — 500 € of commission in
+a month — depends on a product that does not exist.
+
+That is the sentence this closure exists to make impossible to miss: **an entire cycle produced
+no movement on either success criterion.**
+
+## What was deferred, and why
+
+- **D1 and D2** to cycle 02, unchanged. They are the decider's and cost no engineering.
+- **D3** to cycle 02 with its branch intact. The remaining work is one thing wearing two names:
+  the venue's page cap must be met by reading **fewer, better-targeted pages**, which is the same
+  change as the pacing work its weight-based rate limiter demands. Fixing one fixes the other.
+- **Three scenarios** naming AC2's refused share, AC3's monthly cost and AC4's unreproducible
+  share, without which the sheet is evidence for the window machinery rather than for D3.
+- **`operations.md` gaps**: no retry-rate metric, the 429 deviation unrecorded, and a 60-second
+  budget that is per call where one invocation makes two.
+- **PDR-0002**, three verdicts instead of two, proposed and awaiting the decider.
+
+## Where the next framing starts
+
+**With the honest reading of this cycle, not with its backlog.**
+
+One deliverable of three consumed the whole appetite and was not accepted. Five verification
+passes found **eight defects** — every one real, two of which no test would have caught because
+the tests passed each time. The process held; **the batch was mis-sized, and that was the
+framer's error, stated here rather than left for the next session to rediscover.** The pull
+request reached 876 lines against a 400-line budget, and that number was the measurement of the
+mistake before anyone named it.
+
+The second reading matters more. **This cycle built a tool that helps an administrator choose
+traders, and produced no evidence that any member wants to copy one.** D1 was the cheapest
+deliverable in the cycle, needed no code, and was the only one bearing on a charter success
+criterion. It should go first in cycle 02, and probably alone.
+
+### D3 — what the fourth verification found, and where it was stopped
+
+**Two defects, both fixed here, both in the branch no earlier pass had reached.** The verifier
+got there by changing how it sampled: earlier passes looked at the highest *monthly volume*,
+which finds burst traders; the population that crosses the 40,000-fill bound is the sustained
+market maker, and the cheap signature is one mid-window day that is itself page-capped. Four
+funded addresses crossed on the first attempt. **The bound is a normal Tuesday for a market
+maker, not an exotic case.**
+
+1. **`traded on 18 of the 17 days read`** — an impossible sentence, printed to an
+   administrator. Two numbers on different bases. Now counted against the same base.
+2. **A cut-short read kept the *stalest* part of the window.** Paging ascends, so stopping at
+   the cap discarded the most recent 13 of 30 days and reported the rest as current. A trader
+   who stopped, resized or blew up a fortnight ago was invisible. The read now retries over a
+   **recent** window sized to what the first pass got through, and the command states the
+   **dates** it read — complete or not.
+3. **The concentration threshold was a cliff.** 0.34 warned at 10 days of 30 and not at 11,
+   leaving a 2.7× understatement unnamed. The constant is gone; the factor is arithmetic and is
+   stated for every trader.
+
+**Where this stops, and why it stops rather than continues.** Up to 40 heavy reads per
+invocation trip the venue's rate limiter. A retry with exponential backoff, jitter, a maximum
+count and a total budget is in place (`operations.md`), and the command now **says** it was
+throttled instead of hanging or inventing an answer — but on the over-bound traders it still
+returns `no verdict`. Measured: 25 rapid *light* calls pass untouched, so the limiter is
+**weight-based**, and a 2,000-row page is what costs. The fix is pacing, not retrying.
+
+**It is not written, deliberately.** This session's own bursts have left the limiter hot, so a
+pacing change could not be observed here — and writing code that cannot be verified is the one
+thing four verification passes have made indefensible. Recorded as an operational gap with its
+measurement, for a batch that can watch it work.
+
+### D3 — the fourth verification failed a scenario, and named the family
+
+A session that had never touched this branch ran the ten scenarios. **Nine passed, S8 failed**,
+and it found two more administrator-facing defects alongside.
+
+**S8's failure.** The narrowing written to keep the recent end of a cut-short window **kept the
+stale front a second time**, for a trader dense enough that the narrowed window also overflowed.
+Observed live: 40,000 fills read covering 2026-09-06 to 2026-09-10, printed as
+`2026-09-02 to 2026-09-21`, with the trader's 2,000 fills **of the day of the run** never read.
+The failure was in the exact direction the previous commit was written to prevent.
+
+**And, printed three lines apart in the same answer:** *"the venue could not return the 30 days
+asked for"*, then *"the answer below is complete"*, then *"extrapolated from the 3.9 days
+actually read"*. The word complete was a fixed string that never consulted whether it was true.
+
+**What the verifier saw that matters more than the bug.** All four defects on this branch are
+**the same defect wearing different clothes**: a number derived from what was *asked for*,
+printed as a fact about what was *read*. `days_observed` from a capped page; the concentration
+cliff; the stale front; and the requested bounds rendered as "the dates it read". Each was fixed
+where it surfaced.
+
+**So the family was ended rather than its fourth member.** `FillWindow` now reports the
+timestamps of the fills it actually holds, and the command prints only those. S6 becomes
+self-evidencing, and S8's failure can no longer be expressed — there is no longer a number that
+describes a range nobody read.
+
+**Also recorded, not addressed here:** the retry meets `operations.md`'s green branch except for
+its metric, retrying 429 is a justified deviation that is not recorded as one, and the 60s budget
+is per call where one invocation makes two. Three of D3's five acceptance criteria are covered by
+tests but named by no scenario, so a regression in any of them would leave every scenario green.
