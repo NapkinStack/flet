@@ -73,11 +73,25 @@ member capital under copy. Observed from the builder fee credited on-chain.
 **Distribution:**
 
 - A Discord app is capped at **100 servers** unverified and becomes eligible for verification
-  at **75**. *Excerpt.* Verification needs a live privacy policy and terms of service, identity
-  verification, and a justification of each privileged intent — so the app uses **slash
+  at **75** — an email arrives at 75 with the link to apply. Corroborated across Discord's own
+  developer support articles; **the Developer Policy page itself has now refused four
+  independent sessions with HTTP 403**, so the clause on financial information is still
+  *unread*, not merely *excerpt*. Verification needs a live privacy policy and terms of service,
+  identity verification, and a justification of each privileged intent — so the app uses **slash
   commands only** and never reads message content.
-- Telegram's Bot Developer Terms **§7** restricts Mini Apps with crypto or wallet
-  functionality to TON, with a §7.3 multichain carve-out. *Excerpt, and unread.*
+- **Telegram: read on the primary source, and it decides more than it looked like it would.**
+  Bot Developer Terms **§7**: *"all Mini Apps which implement cryptocurrency functionality,
+  either within the Mini App itself **or within its connected bot**, are required to be based
+  exclusively on [TON]"*. **§7.3** permits multichain wallets *"provided that such actions are
+  performed directly within the interface of the Mini App"*, with external interactions through
+  TON Connect only.
+
+  Hyperliquid is not TON, so **a Mini App is closed to this product**. What §7 does not reach is
+  a **bot with no Mini App at all**: the restriction is written about Mini Apps and the bots
+  connected to them. That leaves one possible shape on Telegram — a bot whose wallet step sends
+  the member to an ordinary web page in their browser, outside Telegram. Whether that survives
+  contact with Telegram's review is **untested**, and it is a narrower path than Discord's.
+  *The decider has already said that excluding Telegram is acceptable.*
 
 **Legal:** the members are majority EU residents, the venue trades perpetual futures, and the
 operator holds no authorisation. A written scoping opinion has been requested
