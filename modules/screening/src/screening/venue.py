@@ -153,8 +153,13 @@ def fills_since(
     # and what it dropped is the newest — the half that answers "can my members copy this
     # trader *now*". Read again over a window that ends now, sized to what the first pass got
     # through at this trader's rate.
+    # The narrowed window can overflow too, for a trader dense enough. Its own completeness
+    # flag is kept: dropping it is how a second-pass truncation came back as "complete".
     recent_from = now - max(covered_ms, _MS_PER_DAY)
     read, _, _ = _read_ascending(address, recent_from, now, client, waiting)
+    # Incomplete either way: the window asked for was never covered. Whether the narrowed one
+    # was is no longer load-bearing, because the answer now reports the dates of the fills it
+    # actually holds rather than the range it requested.
     return FillWindow(tuple(read), Decimal(days), False, recent_from, now, waiting.waits)
 
 

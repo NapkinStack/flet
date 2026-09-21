@@ -48,12 +48,16 @@ def _parser() -> argparse.ArgumentParser:
 
 def _render(address: str, verdict: Verdict, window: FillWindow) -> str:
     head = "COPYABLE" if verdict.copyable else "NOT COPYABLE"
-    read_from = _date(window.starts_at_ms)
-    read_to = _date(window.ends_at_ms)
+    # The dates of the fills actually held, never the range that was requested.
+    held_from = _date(window.first_fill_ms) if window.first_fill_ms else "?"
+    held_to = _date(window.last_fill_ms) if window.last_fill_ms else "?"
     window_label = (
-        f"{read_from} to {read_to}"
+        f"{held_from} to {held_to}"
         if window.complete
-        else f"{read_from} to {read_to} only — the venue could not return the 30 days asked for"
+        else (
+            f"{held_from} to {held_to} only — the venue could not return the "
+            f"{window.days_requested:.0f} days asked for, and this is the part it did return"
+        )
     )
     lines = [
         f"{head} — {address} at a {verdict.ticket:,.0f} ticket",
@@ -63,8 +67,8 @@ def _render(address: str, verdict: Verdict, window: FillWindow) -> str:
     ]
     if window.waits:
         lines.append(
-            f"  the venue asked us to slow down {window.waits} time(s); the answer below is "
-            f"complete but the read was throttled"
+            f"  the venue asked us to slow down {window.waits} time(s)"
+            + ("" if window.complete else ", and the read below is the part that got through")
         )
     lines += [f"  · {reason}" for reason in verdict.reasons]
     return "\n".join(lines)
