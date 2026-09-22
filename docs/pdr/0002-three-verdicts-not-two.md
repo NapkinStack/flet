@@ -362,6 +362,17 @@ partial line, and it is written here as one rule so it does not have to be said 
   never reaches stdout: 150 fuzzed answers with coin names literally `"COPYABLE"` leaked
   nothing.
 
+**`--help` is the exception to the first two, and the only one.** It forms no verdict, writes
+its usage to stdout by design, and exits **0** — the one exit 0 that is not a verdict, as the
+module's README already said and this document did not. Nine routes to it were measured, from
+`-h` to `0xabc --ticket 500 --help`; every one prints the usage and exits 0. It is an exception
+rather than a defect because it says nothing about a trader: a caller who asked how to run the
+command is not a caller being told an answer.
+
+Recorded because narrowing the first guarantee to *no verdict formed* — which was the right
+narrowing, and load-bearing — pulled `--help` squarely inside a sentence that then denied what
+it does. The command was never wrong here; three drafts of this paragraph were.
+
 ### What it does not guarantee, named so it is not rediscovered as a defect
 
 **A verdict that cannot be delivered comes back two different ways**, and the first sentence
