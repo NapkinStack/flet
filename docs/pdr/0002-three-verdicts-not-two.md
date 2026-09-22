@@ -279,3 +279,43 @@ not the verdict — is what needs fixing (`modules/screening/docs/adr/0003`).
 
 If the read ever covers the window it asks for reliably, the extrapolation reservation and the
 ceiling both become dead code and are removed rather than left as reassurance.
+
+
+---
+
+## Amendment, 2026-09-22 — `NO VERDICT` is an empty stdout, not a word
+
+**Decided by @napkinstack-admin**, asked directly, after a confirmation run raised the gap.
+
+### What this settles
+
+This PDR and D3's sixth acceptance criterion both say *"the verdict is `NO VERDICT`"*. The
+command prints those two words nowhere. It writes **nothing at all on stdout**, puts
+`no verdict: <reason>` on stderr, and exits `3`:
+
+```
+$ screening 0xabc --ticket 500
+no verdict: the trader's account value must be a positive number   # stderr
+$ echo $?
+3
+```
+
+That is the intended behaviour and it stays. **stdout carries the answer a script consumes;
+stderr carries the explanation a human reads.** When there is no answer, stdout is empty, so
+nothing a script reads back can be mistaken for a verdict — which is the same concern that
+renumbered the exit codes by severity one section above.
+
+### Why it is written here
+
+The module's `README.md` had already restated the criterion this way, as
+`*(nothing on stdout)*` | **3**. The verifier's finding was not about the behaviour, which it
+had confirmed on twelve separate shapes of unreadable input: it was that **an expected result
+had been changed in a README, by the author, without the decider agreeing to it visibly**
+(`playbooks/verification.md`). The reading was right and the route was wrong, so the decision
+is recorded where decisions live, and the README now follows the PDR rather than amending it.
+
+### What it does not change
+
+No code, no test, no threshold. `NO VERDICT` remains the name of the outcome in this document,
+in the cycle's acceptance criteria and in the module's own vocabulary — it is the name of an
+absence, and the absence is what is printed.
