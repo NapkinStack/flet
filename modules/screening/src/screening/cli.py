@@ -11,6 +11,7 @@ import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
+from typing import NoReturn
 
 import httpx
 
@@ -28,6 +29,11 @@ EXIT_COPYABLE = 0
 EXIT_WITH_RESERVATIONS = 1
 EXIT_NOT_COPYABLE = 2
 EXIT_NO_VERDICT = 3
+
+#: argparse's own status for a usage error. It never reaches the caller — `_decide` reads it
+#: as no verdict — but `2` is NOT COPYABLE here, and an unnamed 2 in this file invites the
+#: reader to think a typo produces a verdict.
+EXIT_USAGE = 2
 
 
 def _say(reason: str) -> None:
@@ -56,7 +62,12 @@ def _say(reason: str) -> None:
         return
     # A broken or closed stderr. There is nowhere left to say it, and stdout is not a
     # fallback: silence, and the exit code carries the answer on its own.
-    with contextlib.suppress(OSError, ValueError):
+    #
+    # `Exception`, not `(OSError, ValueError)`: a confirmation run reached exit 1 — which
+    # names a verdict — through a `sys.stderr` whose `write` raised `RuntimeError`. It found
+    # no route to that through a shell, and one character closes it. `KeyboardInterrupt` and
+    # `SystemExit` are `BaseException` and still leave.
+    with contextlib.suppress(Exception):
         print(reason, file=stream)
 
 
@@ -64,8 +75,27 @@ def _date(ms: int) -> str:
     return datetime.fromtimestamp(ms / 1000, tz=UTC).strftime("%Y-%m-%d")
 
 
+class _Parser(argparse.ArgumentParser):
+    """`argparse` reports a usage error itself, and it does not go through `_say`.
+
+    `ArgumentParser.error` calls `print_usage(sys.stderr)`. With fd 2 closed `sys.stderr` is
+    `None`, and `print_usage` substitutes **stdout** for it — so six ordinary malformed
+    command lines put 46 bytes of `usage: ...` where the verdict goes, under exit 3. A
+    confirmation run measured it, and it is the same shape as the leak closed one commit
+    earlier: that guard covered every write in this file, and argparse is not in this file.
+
+    Reporting the error through `_say` and exiting with no message of argparse's own keeps
+    `--help` on stdout, where it belongs, and leaves the mapping in `_decide` untouched:
+    `SystemExit(2)` from a usage error is already read there as no verdict.
+    """
+
+    def error(self, message: str) -> NoReturn:
+        _say(f"{self.format_usage().rstrip()}\n{self.prog}: error: {message}")
+        self.exit(EXIT_USAGE)
+
+
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = _Parser(
         prog="screening",
         description=(
             "Can a member of a given ticket copy this trader? Answers from the trader's "

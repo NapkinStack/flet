@@ -319,3 +319,46 @@ is recorded where decisions live, and the README now follows the PDR rather than
 No code, no test, no threshold. `NO VERDICT` remains the name of the outcome in this document,
 in the cycle's acceptance criteria and in the module's own vocabulary — it is the name of an
 absence, and the absence is what is printed.
+
+
+---
+
+## Amendment, 2026-09-22 (second) — what "nothing on stdout" promises, and what it cannot
+
+**Decided by @napkinstack-admin**, asked directly, after a third confirmation run.
+
+### Why this one exists
+
+The amendment above says *"it writes nothing at all on stdout"*. Taken literally, that is a
+promise about every way a process can be started, and three confirmation runs walked into it
+one layer at a time: the reason printed by this module's own code (closed), the reason printed
+by the backstop under it (closed), the usage line printed by `argparse` (closed), and then
+CPython's own finaliser, which writes `Exception ignored on flushing sys.stdout` and exits
+**120** when it cannot flush a stream the command already gave up on.
+
+Each was a real finding. The fourth is not reachable from inside the module, and a promise the
+code cannot keep will keep producing refusals until it is written as what it actually is.
+
+### What the command guarantees
+
+- **When there is no verdict, nothing the command writes goes to stdout.** Not the reason, not
+  a usage line, not a partial answer. The reason goes to stderr when there is a stderr able to
+  take it, and nowhere at all when there is not.
+- **The exit code is the interface.** `0`, `1`, `2`, `3`, by severity. A caller decides on the
+  code; stdout is for a caller that also wants the figures.
+- **No word naming a verdict ever appears on stdout unless that verdict was formed.**
+
+### What it does not guarantee, named so it is not rediscovered as a defect
+
+If the interpreter cannot flush a stream, it prints its own message and exits **120** — a
+healthy trader whose verdict could not be delivered, not an opinion about that trader. `120` is
+outside the four codes on purpose: a caller switching on `0`/`1`/`2`/`3` never reads it as an
+answer, and the command has no way to prevent it. The same is true of whatever a shell or a
+supervisor writes to the same descriptors.
+
+### What it does not change
+
+No threshold, no verdict, no exit code. The three guarantees above are what the command already
+does at this head, with the `argparse` route closed; this amendment states them where the next
+verifier will read them, instead of leaving a stronger sentence that the fifth layer would
+falsify again.

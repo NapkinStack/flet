@@ -35,6 +35,11 @@ measurement is not an answer here.
 
 `--help` prints the usage and exits **0**, as a command should. It is the one exit 0 that is not a verdict.
 
+**Only these four codes are answers.** If the interpreter cannot write the answer at all — a closed or a full
+stdout — it exits **120** and prints nothing. That is a verdict that could not be delivered, never an opinion
+about the trader, and the command cannot prevent it
+([PDR-0002](../../docs/pdr/0002-three-verdicts-not-two.md), second amendment of 2026-09-22).
+
 **The codes run by severity**, so a script keeping the idiom it already has — `if code == 0` —
 stops getting a zero for a trader the command was warning it about.
 

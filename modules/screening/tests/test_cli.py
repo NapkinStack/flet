@@ -417,3 +417,27 @@ def test_no_verdict_never_falls_through_to_stdout(
     monkeypatch.setattr(sys, "stderr", None)
     assert main([ADDRESS, "--ticket", "500"], client=_refusing_client()) == 3
     assert capsys.readouterr().out == "", "the reason landed on stdout"
+
+
+def test_a_malformed_command_line_never_writes_to_stdout(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`screening --bogus >out 2>&-` put 46 bytes of `usage: …` on stdout under exit 3:
+    `ArgumentParser.error` calls `print_usage(sys.stderr)`, and `print_usage` substitutes
+    stdout when that is `None`. The guard on this file's own prints did not cover argparse,
+    because argparse is not in this file."""
+    import sys
+
+    monkeypatch.setattr(sys, "stderr", None)
+    for argv in ([], ["--bogus"], [ADDRESS], ["--ticket", "500"]):
+        assert main(argv) == 3
+        assert capsys.readouterr().out == "", f"{argv} wrote to stdout"
+
+
+def test_help_still_goes_to_stdout_and_exits_zero(capsys: pytest.CaptureFixture[str]) -> None:
+    """Routing the parser's errors must not take `--help` off stdout with them. It is the one
+    exit 0 that is not a verdict, so it has to be readable where a reader looks."""
+    assert main(["--help"]) == 0
+    printed = capsys.readouterr()
+    assert "usage: screening" in printed.out
+    assert printed.err == ""
