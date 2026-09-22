@@ -139,11 +139,18 @@ def main(
             window_complete=window.complete,
             window_asked_days=window.days_requested,
         )
-    except ValueError as error:
-        # `ArithmeticError` was caught here too, as a second guard against `--ticket nan`
-        # reaching `assess`. `is_finite()` above already stops every case, so the branch was
-        # unreachable — and an untested brace is not belt and braces, it is a line nobody can
-        # show is doing anything.
+    except (ValueError, ArithmeticError) as error:
+        # `ArithmeticError` is the backstop, and it was removed last round on the written
+        # reason that `is_finite()` above "already stops every case". That was false:
+        # `is_finite()` guards `--ticket` and nothing else, while every other number in
+        # `assess` comes from the venue. A verifier walked `accountValue: "NaN"`,
+        # `accountValue: "Infinity"`, a `px: "NaN"` fill and a zero-notional fill straight
+        # through to an uncaught decimal error — which the process reports as exit 1, and
+        # this deliverable is what made 1 mean COPYABLE WITH RESERVATIONS.
+        #
+        # The four shapes are refused in `assess` now, with reasons. This stays because the
+        # fifth one has not been thought of yet, and the cost of missing it is a crash that
+        # reads as a qualified yes.
         print(f"no verdict: {error}", file=sys.stderr)
         return EXIT_NO_VERDICT
 

@@ -49,10 +49,16 @@ def assess(
     """
     if not fills:
         raise ValueError("no fills: a verdict cannot be given without the trader's executions")
-    if trader_account <= 0:
-        raise ValueError("the trader's account value must be positive")
-    if ticket <= 0:
-        raise ValueError("the member's ticket must be positive")
+    # Finiteness is checked before any comparison, because `Decimal("NaN") <= 0` does not
+    # answer False, it raises — and the venue's own numbers reach here unfiltered. A verifier
+    # drove `accountValue: "NaN"` and a `px: "0"` fill through the command and both escaped as
+    # uncaught exceptions, which the process reports as exit 1: COPYABLE WITH RESERVATIONS.
+    if not trader_account.is_finite() or trader_account <= 0:
+        raise ValueError("the trader's account value must be a positive number")
+    if not ticket.is_finite() or ticket <= 0:
+        raise ValueError("the member's ticket must be a positive number")
+    if any(not f.notional.is_finite() for f in fills):
+        raise ValueError("the venue returned a fill whose notional is not a number")
 
     span = (Decimal(max(f.time_ms for f in fills) - min(f.time_ms for f in fills))) / _MS_PER_DAY
     days = window_days if window_days is not None else span
@@ -82,6 +88,12 @@ def assess(
     # The ticket that clears the floor on COVERAGE_TARGET of the orders: the smallest
     # (1 - COVERAGE_TARGET) may be refused.
     cutoff = notionals[int((Decimal(1) - COVERAGE_TARGET) * count)]
+    if cutoff <= 0:
+        # One zero-notional fill in the bottom fifth is enough, and it needs no exotic input.
+        raise ValueError(
+            "a fill of zero notional sits inside the coverage target: no minimum ticket can "
+            "be computed from it"
+        )
     minimum_ticket = MINIMUM_ORDER_USDC / (cutoff / trader_account)
 
     copyable = refused_share <= Decimal(1) - COVERAGE_TARGET
@@ -238,7 +250,9 @@ def _reasons(
             f"{_DAYS_PER_MONTH / days:.1f}"
         )
 
-    if unreproducible_share > 0:
+    # Rounded, not raw: a share of 0.4% printed `0% of the fills were posted rather than
+    # taken: a copier cannot reproduce them`, which warns about nothing and reads as a bug.
+    if round(unreproducible_share * 100) > 0:
         said.append(
             f"{unreproducible_share:.0%} of the fills were posted rather than taken: a copier "
             f"arriving afterwards cannot reproduce them"

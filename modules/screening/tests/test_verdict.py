@@ -390,3 +390,32 @@ def test_the_floor_boundary_is_the_coverage_target_exactly() -> None:
 
     past = spread([fill("900")] * 3 + [fill("2000")] * 7)
     assert assess(past, trader_account=trader_account, ticket=ticket).copyable is False
+
+
+def test_an_order_of_exactly_ten_usdc_is_placeable() -> None:
+    """`An order UNDER 10 USDC is refused by the venue` (AGENTS.md). The boundary test added
+    last round pins the refused *share*; this pins the *notional*, and `<` becoming `<=`
+    refuses an order the venue accepts."""
+    # scale 1/100: a notional of 1000 becomes exactly 10 USDC at the member's ticket.
+    exactly = spread([fill("1000")] * 10)
+    v = assess(exactly, trader_account=Decimal(100_000), ticket=Decimal(1_000))
+    assert v.refused_share == Decimal(0), "exactly ten clears; only under ten is refused"
+
+
+def test_the_extrapolation_alert_is_three_not_whatever_the_constant_says() -> None:
+    """Both existing tests build their fixture from `EXTRAPOLATION_ALERT`, so they pin the
+    operator and not the value: raising it from 3 to 5 passed the whole suite while the README
+    says `more than 3x`."""
+    day = 86_400_000
+    at_four = [
+        Fill(coin="BTC", price=Decimal(1000), size=Decimal(1), time_ms=t, took_liquidity=True)
+        for t in (NOW_MS - int(7.5 * day), NOW_MS)
+    ]
+    v = assess(
+        at_four,
+        trader_account=Decimal(100_000),
+        ticket=Decimal(50_000),
+        window_complete=False,
+        window_asked_days=Decimal(30),
+    )
+    assert "extrapolation" in v.reservations, "7.5 days of 30 is 4x, and 4 is more than 3"

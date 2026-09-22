@@ -7,6 +7,8 @@ dist/
 build/
 target/
 coverage/
+.coverage
+.coverage.*
 .env
 .env.*
 !.env.example

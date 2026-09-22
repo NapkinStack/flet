@@ -31,7 +31,9 @@ measurement is not an answer here.
 | `COPYABLE` | **0** | At least **80%** of the trader's orders clear the venue's 10 USDC floor at this ticket, and nothing else is worth reserving about. The share that would still be refused is printed. |
 | `COPYABLE WITH RESERVATIONS (…)` | **1** | Clears the floor, and at least one reservation applies. The reservations are **named in the headline**, so the first line alone is actionable. |
 | `NOT COPYABLE (…)` | **2** | More than 20% of the orders fall under the floor. The member cannot place this trader's orders at this ticket, whatever else is true — impossible beats expensive. Any reservations are still printed below. |
-| *(nothing on stdout)* | **3** | **No verdict.** The venue could not be read, the command line was malformed, or the data cannot support an answer. |
+| *(nothing on stdout)* | **3** | **No verdict.** The venue could not be read or answered with something that is not a number, the command line was malformed, or the data cannot support an answer. |
+
+`--help` prints the usage and exits **0**, as a command should. It is the one exit 0 that is not a verdict.
 
 **The codes run by severity**, so a script keeping the idiom it already has — `if code == 0` —
 stops getting a zero for a trader the command was warning it about.

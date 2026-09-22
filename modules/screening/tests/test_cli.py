@@ -256,3 +256,87 @@ def test_a_ticket_that_is_not_a_finite_amount_is_no_verdict() -> None:
     rows = [a_fill("2000", day) for day in range(0, 30)]
     for bad in ("nan", "Infinity", "-Infinity"):
         assert main([ADDRESS, "--ticket", bad], client=venue(rows, "20000")) == 3, bad
+
+
+def test_the_headline_names_two_reservations_in_the_order_the_decision_fixes(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The order was asserted on the private helper, one layer below the surface the decision
+    is about. PDR-0002 fixes the order of what is **named in the headline**, and sorting the
+    tuple inside `_render` passed all sixty-eight tests — `fees` would have stopped being
+    first and nothing would have said so."""
+    # `fees` and `concentration`, chosen because the decision's order and alphabetical order
+    # disagree on them. A fixture of `fees, reproducibility` is already alphabetical, so
+    # sorting the tuple leaves it identical and the assertion proves nothing — which is what
+    # the first attempt at this test did.
+    rows = [a_fill("300000", day) for day in range(0, 10)]
+    main([ADDRESS, "--ticket", "2000"], client=venue(rows, "20000"))
+    first = capsys.readouterr().out.splitlines()[0]
+
+    assert "(fees, concentration)" in first, (
+        "both named, in the decision's order — sorted() would give (concentration, fees)"
+    )
+
+
+def test_a_refused_trader_says_not_copyable_in_those_words(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Rewriting the floor-versus-ceiling test deleted the only assertion of this literal, and
+    nothing replaced it: renaming the verdict to `NOT-COPYABLE` passed all sixty-eight tests.
+    Fixing a blocker should not cost the coverage that was already there."""
+    rows = [a_fill("2000", day) for day in range(0, 30)]
+    code = main([ADDRESS, "--ticket", "500"], client=venue(rows, "300000"))
+    assert capsys.readouterr().out.splitlines()[0].startswith("NOT COPYABLE")
+    assert code == 2
+
+
+def test_a_venue_number_that_is_not_a_number_is_no_verdict() -> None:
+    """`is_finite()` guards `--ticket` and nothing else. Every other number in `assess` comes
+    from the venue, and a verifier walked four shapes straight through to an uncaught decimal
+    error — which the process reports as exit 1, the code this deliverable made mean
+    COPYABLE WITH RESERVATIONS. A crash must never read as a qualified yes."""
+    rows = [a_fill("2000", day) for day in range(0, 30)]
+    for account in ("NaN", "Infinity"):
+        assert main([ADDRESS, "--ticket", "2000"], client=venue(rows, account)) == 3, account
+
+    # The one that needs no exotic input at all: enough zero-notional fills to reach the
+    # coverage target, so the cutoff itself is zero and the minimum ticket divides by it.
+    # One zero alone is not a crash — it is simply refused under the floor, correctly.
+    with_zeros = [a_fill("0", day) for day in range(0, 9)] + [
+        a_fill("2000", day) for day in range(9, 30)
+    ]
+    assert main([ADDRESS, "--ticket", "2000"], client=venue(with_zeros, "20000")) == 3
+
+    nan_price = [a_fill("NaN", 0), *(a_fill("2000", day) for day in range(1, 30))]
+    assert main([ADDRESS, "--ticket", "2000"], client=venue(nan_price, "20000")) == 3
+
+
+def test_a_complete_window_is_not_reported_as_extrapolated(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """One line in `main` decides whether the monthly figures are measured or extrapolated.
+    Inverting it passed the whole suite: a complete month would report `traded on 1 of 1 days`
+    — losing `concentration` — and inflate turnover thirtyfold."""
+    # The fills must span FEWER days than the window, or both wirings agree and the test
+    # proves nothing — the first attempt used fills on day 0 and day 29, which span 30.
+    rows = [a_fill("2000", day) for day in range(20, 30)]
+    main([ADDRESS, "--ticket", "2000"], client=venue(rows, "20000"))
+    out = capsys.readouterr().out
+    assert "extrapolat" not in out, "the window asked for was returned whole"
+    assert "of the 30 days read" in out, (
+        "counted against the 30 days asked for, not the 10 the fills happen to span"
+    )
+
+
+def test_any_failure_inside_assess_is_no_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The `ArithmeticError` backstop cannot be reached through any input `assess` now
+    refuses, so nothing would show it does anything — which is the criticism that got it
+    removed once already, with the four escapes that followed. Forced here instead."""
+    import screening.cli as cli
+
+    def boom(*args: object, **kwargs: object) -> None:
+        raise ArithmeticError("something nobody thought of")
+
+    monkeypatch.setattr(cli, "assess", boom)
+    rows = [a_fill("2000", day) for day in range(0, 30)]
+    assert main([ADDRESS, "--ticket", "2000"], client=venue(rows, "20000")) == 3
