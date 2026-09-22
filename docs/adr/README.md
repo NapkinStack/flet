@@ -24,3 +24,4 @@ See `docs/os/06-decisions.md`.
 |---|---|---|---|
 | [0001](./0001-split-the-agent-github-identity-in-two.md) | Split the agent's forge identity in two: the App commits, the administration token configures | Accepted | 2027-03-20 |
 | [0002](./0002-a-delegated-session-may-verify-and-signs-as-itself.md) | A delegated session may verify, and signs under its own identifier | Accepted |
+| [0003](./0003-spend-verification-where-the-money-is.md) | Spend verification where the money is, and stop tidying inside fixes | Accepted |
