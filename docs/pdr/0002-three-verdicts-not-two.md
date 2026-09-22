@@ -341,9 +341,16 @@ code cannot keep will keep producing refusals until it is written as what it act
 
 ### What the command guarantees
 
-- **When there is no verdict, nothing the command writes goes to stdout.** Not the reason, not
+**All three speak about what the command *chooses* to write.** Bytes it already handed to the
+operating system, before a reader went away or a stream refused the rest, are not a choice and
+are not covered — the third confirmation run had to say this once about a word and once about a
+partial line, and it is written here as one rule so it does not have to be said a third time.
+
+- **When no verdict is formed, nothing the command writes goes to stdout.** Not the reason, not
   a usage line, not a partial answer. The reason goes to stderr when there is a stderr able to
-  take it, and nowhere at all when there is not.
+  take it, and nowhere at all when there is not. *No verdict formed*, not *exit code 3*: the
+  paragraph below establishes that 3 is also what a formed verdict returns when it cannot be
+  delivered, and on that route stdout holds whatever the failed write had already put there.
 - **The exit code is the interface.** `0`, `1`, `2`, `3`, by severity. A caller decides on the
   code; stdout is for a caller that also wants the figures.
 - **No word this command chooses ever names a verdict on stdout unless that verdict was
@@ -363,9 +370,16 @@ written here named only the rarer one.
 - **The write fails** — `PYTHONIOENCODING=ascii` cannot encode the em dash in the headline —
   and the command's own backstop returns **3**. That is one of the four codes, and it reads as
   *the data cannot support an answer* about a trader whose data supported one perfectly. It
-  fails in the safe direction: never a verdict, never a wrong one, stdout genuinely empty. A
-  caller cannot tell it from an unreadable venue, and that is the cost of the backstop, stated
-  rather than discovered.
+  fails in the safe direction: never a verdict, never a wrong one. A caller cannot tell it from
+  an unreadable venue, and that is the cost of the backstop, stated rather than discovered.
+
+  **How much of stdout survives depends on where the write died**, and the first version of this
+  bullet claimed the tidier half as though it were the whole. An encoder that refuses the answer
+  leaves stdout **empty** — measured, including on a 133 KB answer, because it refuses the chunk
+  whole. A reader that closes a pipe partway through an answer larger than the buffer leaves
+  **what was already written**: exit 3 over 40 bytes reading `COPYABLE — …`, measured three times
+  out of three. It needs an answer past 64 KB, which needs a ticket no validation rejects yet —
+  one more reason `--ticket` validation is the follow-up it is.
 - **The flush fails** — the interpreter cannot empty a stream the command already gave up on —
   and CPython prints its own message and exits **120**. Outside the four codes on purpose: a
   caller switching on `0`/`1`/`2`/`3` never reads it as an answer.
