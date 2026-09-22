@@ -365,3 +365,55 @@ def test_a_read_that_raises_what_venue_does_not_catch_is_no_verdict() -> None:
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     assert main([ADDRESS, "--ticket", "500"], client=client) == 3
+
+
+def _refusing_client() -> httpx.Client:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={})
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_a_broken_stderr_does_not_become_a_verdict(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`... 2>&1 >/dev/null | true` with an unbuffered stderr: the reason cannot be written,
+    `BrokenPipeError` escapes the print, and the process exits 1 — COPYABLE WITH RESERVATIONS,
+    decided by a reader that consumed nothing. Measured at exit 1 through the installed
+    command before this guard."""
+    import sys
+
+    class Broken:
+        def write(self, text: str) -> int:
+            raise BrokenPipeError(32, "Broken pipe")
+
+        def flush(self) -> None:
+            raise BrokenPipeError(32, "Broken pipe")
+
+    monkeypatch.setattr(sys, "stderr", Broken())
+    # The venue's own refusal, and the backstop under everything else. Both used to report
+    # through an unguarded print, and the second one is where a failure lands last.
+    assert main([ADDRESS, "--ticket", "500"], client=_refusing_client()) == 3
+
+    def explode(request: httpx.Request) -> httpx.Response:
+        raise RuntimeError("nothing catches this one")
+
+    assert (
+        main(
+            [ADDRESS, "--ticket", "500"],
+            client=httpx.Client(transport=httpx.MockTransport(explode)),
+        )
+        == 3
+    )
+
+
+def test_no_verdict_never_falls_through_to_stdout(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`... 2>&-` closes fd 2, CPython sets `sys.stderr` to None, and `print(file=None)` writes
+    to stdout: 59 bytes of reason where the verdict goes, under exit 3. The amendment of
+    2026-09-22 says stdout is empty when there is no answer, so nothing read back can be
+    mistaken for one."""
+    import sys
+
+    monkeypatch.setattr(sys, "stderr", None)
+    assert main([ADDRESS, "--ticket", "500"], client=_refusing_client()) == 3
+    assert capsys.readouterr().out == "", "the reason landed on stdout"

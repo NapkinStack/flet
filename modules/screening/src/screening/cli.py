@@ -6,6 +6,7 @@ Read-only. It carries no credential and cannot sign (ADR-0002).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -27,6 +28,36 @@ EXIT_COPYABLE = 0
 EXIT_WITH_RESERVATIONS = 1
 EXIT_NOT_COPYABLE = 2
 EXIT_NO_VERDICT = 3
+
+
+def _say(reason: str) -> None:
+    """The reason, on stderr, or nowhere at all — never on stdout, and never fatally.
+
+    Two ways this line used to decide the exit code by itself, both found by a confirmation
+    run and both reachable through the installed command:
+
+    `... 2>&1 >/dev/null | true` with an unbuffered stderr raises `BrokenPipeError` out of
+    `print`. It escaped `main` — including out of `main`'s own backstop, which is where this
+    lands when everything else has already failed — and CPython exits **1**, which this
+    deliverable is what made mean COPYABLE WITH RESERVATIONS. A reader that consumes nothing
+    is not an opinion about a trader.
+
+    `... 2>&-` closes fd 2, so CPython sets `sys.stderr` to `None`, and `print(file=None)`
+    writes to **stdout**. The reason for having no verdict was landing where the verdict
+    goes, which is what the amendment of 2026-09-22 says never happens. An exit code of 3
+    with 59 bytes on stdout is exactly the shape a script cannot read.
+
+    Neither was introduced by the backstop above; both were in every one of these prints
+    since the command existed, and being one line from closed is not a reason to leave a
+    fourth one open.
+    """
+    stream = sys.stderr
+    if stream is None:
+        return
+    # A broken or closed stderr. There is nowhere left to say it, and stdout is not a
+    # fallback: silence, and the exit code carries the answer on its own.
+    with contextlib.suppress(OSError, ValueError):
+        print(reason, file=stream)
 
 
 def _date(ms: int) -> str:
@@ -110,12 +141,12 @@ def _decide(
     try:
         ticket = Decimal(args.ticket)
     except InvalidOperation:
-        print(f"--ticket: {args.ticket!r} is not a number", file=sys.stderr)
+        _say(f"--ticket: {args.ticket!r} is not a number")
         return EXIT_NO_VERDICT
     if not ticket.is_finite():
         # `nan` and `Infinity` parse as Decimals. Infinity printed a complete verdict headed
         # `at a Infinity ticket` saying every order clears the floor.
-        print(f"--ticket: {args.ticket!r} is not a finite amount", file=sys.stderr)
+        _say(f"--ticket: {args.ticket!r} is not a finite amount")
         return EXIT_NO_VERDICT
 
     owned = client is None
@@ -124,7 +155,7 @@ def _decide(
         window = venue.fills_since(args.address, days=WINDOW_DAYS, client=http, retry=retry)
         account = venue.account_value(args.address, http, retry=retry)
     except venue.VenueUnavailable as error:
-        print(f"venue unavailable — no verdict: {error}", file=sys.stderr)
+        _say(f"venue unavailable — no verdict: {error}")
         return EXIT_NO_VERDICT
     finally:
         if owned:
@@ -151,7 +182,7 @@ def _decide(
         # The four shapes are refused in `assess` now, with reasons. This stays because the
         # fifth one has not been thought of yet, and the cost of missing it is a crash that
         # reads as a qualified yes.
-        print(f"no verdict: {error}", file=sys.stderr)
+        _say(f"no verdict: {error}")
         return EXIT_NO_VERDICT
 
     print(_render(args.address, verdict, window))
@@ -184,7 +215,7 @@ def main(
     try:
         return _decide(argv, client=client, retry=retry)
     except Exception as error:
-        print(f"no verdict: {type(error).__name__}: {error}", file=sys.stderr)
+        _say(f"no verdict: {type(error).__name__}: {error}")
         return EXIT_NO_VERDICT
 
 
