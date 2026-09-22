@@ -16,7 +16,7 @@ deliverables:
   - id: D2
     title: "The screening answer is read from a window that ends now, and the venue does not refuse it"
     module: screening
-    state: ready
+    state: accepted
     acceptance:
       - "Given a trader whose 30 days of fills exceed the page bound, when the command runs, then the window it keeps ends at or near the moment of the run — never a window that ended days before the question"
       - "Given the same trader, when the command runs, then it completes without exhausting the venue's rate limit, and the number of heavy reads it made is stated"
