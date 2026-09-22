@@ -91,7 +91,7 @@ def _render(address: str, verdict: Verdict, window: FillWindow) -> str:
     return "\n".join(lines)
 
 
-def main(
+def _decide(
     argv: Sequence[str] | None = None,
     *,
     client: httpx.Client | None = None,
@@ -156,6 +156,36 @@ def main(
 
     print(_render(args.address, verdict, window))
     return _EXIT[verdict.ruling]
+
+
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    client: httpx.Client | None = None,
+    retry: venue.Retry | None = None,
+) -> int:
+    """`_decide`, with a backstop under the whole of it.
+
+    A verifier reached exit 1 — which this deliverable is what made mean COPYABLE WITH
+    RESERVATIONS — from two ordinary environment variables: `https_proxy=socks5://...`
+    without `socksio` installed, and `SSL_CERT_FILE` naming a file that is not there. Both
+    raise while `httpx.Client` is being built, one line before the `try` that guards the
+    reads, so the process died with an empty stdout and a code that reads as a qualified yes
+    about a trader whose fills were never read. `venue`'s handlers are narrower than they
+    look as well: they catch `httpx.HTTPError`, and `httpx.StreamError` is a `RuntimeError`.
+
+    Nothing caught it because every test of the command passes `client=`, so `venue.client()`
+    — the one line the administrator's own invocation runs — was run by no test at all.
+
+    This is the reasoning behind the `ArithmeticError` backstop in `_decide`, applied to the
+    command rather than to `assess`: no unhandled exception may leave this process carrying a
+    code that names a verdict.
+    """
+    try:
+        return _decide(argv, client=client, retry=retry)
+    except Exception as error:
+        print(f"no verdict: {type(error).__name__}: {error}", file=sys.stderr)
+        return EXIT_NO_VERDICT
 
 
 if __name__ == "__main__":  # pragma: no cover

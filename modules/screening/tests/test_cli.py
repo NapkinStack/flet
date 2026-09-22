@@ -340,3 +340,28 @@ def test_any_failure_inside_assess_is_no_verdict(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(cli, "assess", boom)
     rows = [a_fill("2000", day) for day in range(0, 30)]
     assert main([ADDRESS, "--ticket", "2000"], client=venue(rows, "20000")) == 3
+
+
+def test_a_client_the_environment_refuses_to_build_is_no_verdict(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Every other test here passes `client=`, so `venue.client()` — the only line the
+    administrator's own invocation runs — was run by no test at all. A verifier ran it, with
+    `SSL_CERT_FILE` naming a file that is not there, and got exit 1: COPYABLE WITH
+    RESERVATIONS, about a trader whose fills were never read.
+
+    No `client=` here on purpose. The client is built for real."""
+    monkeypatch.setenv("SSL_CERT_FILE", "/nonexistent/ca.pem")
+    assert main([ADDRESS, "--ticket", "500"]) == 3
+    assert capsys.readouterr().out == "", "no verdict means nothing on stdout"
+
+
+def test_a_read_that_raises_what_venue_does_not_catch_is_no_verdict() -> None:
+    """`venue` catches `httpx.HTTPError`, and `httpx.StreamError` is a `RuntimeError` —
+    as are the `OSError`s a broken socket raises. They escaped as exit 1."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise RuntimeError("the socket went away mid-read")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    assert main([ADDRESS, "--ticket", "500"], client=client) == 3
