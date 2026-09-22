@@ -346,19 +346,46 @@ code cannot keep will keep producing refusals until it is written as what it act
   take it, and nowhere at all when there is not.
 - **The exit code is the interface.** `0`, `1`, `2`, `3`, by severity. A caller decides on the
   code; stdout is for a caller that also wants the figures.
-- **No word naming a verdict ever appears on stdout unless that verdict was formed.**
+- **No word this command chooses ever names a verdict on stdout unless that verdict was
+  formed.** The qualifier is owed: the address is echoed into the headline as the caller typed
+  it, so a caller passing an address that contains a newline and the words `NOT COPYABLE` reads
+  them back. Measured, and left as a caller attacking itself rather than fixed inside a
+  deliverable already over budget — unless the address comes from a list the caller did not
+  write, which is the day input validation stops being a follow-up. What the **venue** says
+  never reaches stdout: 150 fuzzed answers with coin names literally `"COPYABLE"` leaked
+  nothing.
 
 ### What it does not guarantee, named so it is not rediscovered as a defect
 
-If the interpreter cannot flush a stream, it prints its own message and exits **120** — a
-healthy trader whose verdict could not be delivered, not an opinion about that trader. `120` is
-outside the four codes on purpose: a caller switching on `0`/`1`/`2`/`3` never reads it as an
-answer, and the command has no way to prevent it. The same is true of whatever a shell or a
-supervisor writes to the same descriptors.
+**A verdict that cannot be delivered comes back two different ways**, and the first sentence
+written here named only the rarer one.
+
+- **The write fails** — `PYTHONIOENCODING=ascii` cannot encode the em dash in the headline —
+  and the command's own backstop returns **3**. That is one of the four codes, and it reads as
+  *the data cannot support an answer* about a trader whose data supported one perfectly. It
+  fails in the safe direction: never a verdict, never a wrong one, stdout genuinely empty. A
+  caller cannot tell it from an unreadable venue, and that is the cost of the backstop, stated
+  rather than discovered.
+- **The flush fails** — the interpreter cannot empty a stream the command already gave up on —
+  and CPython prints its own message and exits **120**. Outside the four codes on purpose: a
+  caller switching on `0`/`1`/`2`/`3` never reads it as an answer.
+
+**And a caller that changes how the interpreter exits replaces the code.** `PYTHONINSPECT=1`
+re-enters the REPL after the script and discards its status: the command returns 3 and the
+process exits 1. It is not this command deciding — `PYTHONINSPECT=1 python -c "sys.exit(3)"`
+does the same — and it cannot be undone from inside the process. Named here as the general case,
+because the first draft named only the 120 and the next verifier filed the rest as new.
+
+The same is true of whatever a shell or a supervisor writes to the same descriptors.
 
 ### What it does not change
 
-No threshold, no verdict, no exit code. The three guarantees above are what the command already
-does at this head, with the `argparse` route closed; this amendment states them where the next
-verifier will read them, instead of leaving a stronger sentence that the fifth layer would
-falsify again.
+No threshold, no verdict, no exit code, and no line of the module. The three guarantees above
+are what the command already does at this head, with the `argparse` route closed; this amendment
+states them where the next verifier will read them, instead of leaving a stronger sentence that
+the next layer would falsify again.
+
+Its own first draft was falsified within the day, by the confirmation run it was written for:
+two of the three paragraphs above exist because a verifier showed the sentence under them was
+wrong in the common case, or written more absolutely than the code supports. Recorded that way
+round on purpose.

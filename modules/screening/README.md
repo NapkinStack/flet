@@ -35,9 +35,10 @@ measurement is not an answer here.
 
 `--help` prints the usage and exits **0**, as a command should. It is the one exit 0 that is not a verdict.
 
-**Only these four codes are answers.** If the interpreter cannot write the answer at all — a closed or a full
-stdout — it exits **120** and prints nothing. That is a verdict that could not be delivered, never an opinion
-about the trader, and the command cannot prevent it
+**Only these four codes are answers.** A verdict that cannot be written comes back as **3** when the write
+itself fails — an stdout that cannot encode the answer — and as **120** when the interpreter cannot flush it.
+Neither is an opinion about the trader, and a caller that changes how the interpreter exits, such as
+`PYTHONINSPECT`, replaces the code outright
 ([PDR-0002](../../docs/pdr/0002-three-verdicts-not-two.md), second amendment of 2026-09-22).
 
 **The codes run by severity**, so a script keeping the idiom it already has — `if code == 0` —
