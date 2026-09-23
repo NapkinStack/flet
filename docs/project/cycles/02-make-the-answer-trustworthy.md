@@ -1,6 +1,6 @@
 ---
 goal: "Find out whether vouching moves anyone, and make the screening answer one an administrator can act on"
-status: accepted
+status: closed
 appetite_weeks: 3
 start: 2026-09-21
 end: 2026-10-12
@@ -26,7 +26,7 @@ deliverables:
   - id: D3
     title: "Three verdicts instead of two, so the headline cannot say yes to a trader the answer is warning about"
     module: screening
-    state: ready
+    state: accepted
     acceptance:
       - "Given a trader who clears the floor and trips no reservation, when the command runs, then the verdict is COPYABLE and the exit code is 0"
       - "Given a trader who clears the floor with a fee burden above the alert, when the command runs, then the verdict is COPYABLE WITH RESERVATIONS, the fee reservation is named on the first line, and the exit code is 1"
@@ -34,6 +34,8 @@ deliverables:
       - "Given a trader who clears the floor whose volume landed on a third or less of the days, when the command runs, then the verdict is COPYABLE WITH RESERVATIONS and the concentration reservation is named"
       - "Given a trader who does not clear the floor, when the command runs, then the verdict is NOT COPYABLE and the exit code is 2, whatever the reservations say"
       - "Given the venue cannot be read, when the command runs, then the verdict is NO VERDICT and the exit code is 3"
+outcome: shipped
+ended_on: 2026-09-23
 ---
 
 # Cycle 02 — Make the answer trustworthy
@@ -151,4 +153,107 @@ copy a trader, and that this was a decision rather than an oversight.
 
 ## Closure
 
-<Written at the end of the cycle.>
+**Closed on 2026-09-23, on day 3 of a 21-day appetite, with two deliverables accepted and one
+never started.**
+
+`shipped`, not `completed`: `completed` would claim every deliverable was accepted, and D1 was
+not. Nor is this the circuit breaker — the end date was 19 days away. The decider closed early
+because everything this cycle could do with engineering was done, and the one thing left is not
+engineering.
+
+## What was delivered
+
+**D2 — the window read. Accepted (#20).** The venue answers ascending and caps a page, so paging
+forward from thirty days back spent the budget on the oldest fills and died before reaching the
+present: live, it returned a window ending eleven days before the question. The read now walks
+backwards from now, sized from one cheap probe. The window ends at the moment of the run —
+measured at 0 ms — and a sparse trader costs zero heavy reads where a dense one costs 20 of a
+20 budget. This is the S8 failure that stopped cycle 01, closed.
+
+**D3 — three verdicts. Accepted (#26).** `COPYABLE` / `COPYABLE WITH RESERVATIONS (…)` /
+`NOT COPYABLE (…)` / no verdict, exit codes 0/1/2/3 by severity, four reservations named in the
+headline, and a ceiling that refuses to answer at all past 30× rather than printing an inference
+as a fact. Its six acceptance criteria were verified at the head commit by a delegated session
+that had refused the branch five times.
+
+**D1 — five private invitations. Deferred, for the second cycle running.** Nobody has been asked.
+Ten traders and twenty members are *reported* as wanting to test the bot; that is private,
+declarative, and nobody has acted. The cost of this deliverable is five messages and fourteen
+days of waiting, and it has now not been paid twice.
+
+**Not in the deliverables, and worth more than one of them:** ADR-0002 (a delegated session may
+verify and signs as itself), ADR-0003 (the verification budget follows criticality; no unasked
+change inside a fix), PDR-0002 accepted with four amendments, PDR-0003 (a closed pilot before any
+funnel), and `handover.md`, which is why a session with no memory could pick this up at all.
+
+## Which success criteria moved
+
+**Neither. Not one.**
+
+The charter's criteria, as PDR-0003 revised them, are five phase-1 conditions about a closed
+pilot: faithful copying, zero key incident, revocation that works, 60% continuing past day 14, and
+`screening`'s predictions confronted with reality. **Every one of them needs the copying module,
+which does not exist.** The fifth is the only one this cycle touched, and only by making it
+possible: the module now states a fee burden, a refused share and a reproducible share precisely
+enough to be *wrong*. Nothing has confronted them with a member's actual fills, because no member
+has any.
+
+**The sentence this closure owes, promised in advance when the cycle was framed:** the project
+built a tool for choosing traders with no evidence that any member wants to copy one, and that was
+a decision rather than an oversight. It was offered one week on D1 alone, two on D1 and the window
+fix, or three on everything; it chose three on everything, and was told at the time that the third
+option had the same shape as cycle 01. It did not repeat cycle 01 — both engineering deliverables
+landed, in three days. It repeated the other half: **the deliverable that was somebody else's
+calendar did not move, and 19 days of appetite are unspent because the appetite was sized for work
+cycle 01 had already done.**
+
+## What this cycle cost, measured
+
+D3 alone took **six adversarial rounds and six confirmation runs**. Eleven real defects in the
+rounds; **five refusals** in the confirmations, every one correct. The distribution is the finding:
+
+| Origin | Count |
+|---|---|
+| Defects in the original implementation | 4 |
+| Defects the author introduced in later rounds, in changes nobody asked for | 3 |
+| Refusals over a **sentence** in the decision record rather than over code | 3 |
+
+The first blocker survived six rounds for a reason that should be read twice: **all 20 `main(...)`
+calls in the suite passed `client=`**, so the one line an administrator's own invocation runs was
+exercised by no test. Seventy-five green tests were green on a path nobody takes.
+
+What ended the sequence was not another fix. The guarantees in PDR-0002 gained one sentence above
+all three — *they speak about what the command chooses to write* — which closed a family instead of
+an instance, and the verifier then bounded it: two write sites, enumerated statically and
+confirmed by instrumenting 18 paths. **A per-instance clause produces one refusal per round; a
+class-level one ends the round.** That is the transferable lesson of this cycle and it belongs in
+the next one.
+
+## What was deferred, and why
+
+- **D1**, unchanged and now urgent rather than merely owed. It gates the charter's whole phase 1.
+- **Ten follow-ups on `screening`**, listed in #26. The ones that matter: input validation is now
+  load-bearing for two of PDR-0002's caveats, and the thresholds' calibration — a headline saying
+  `COPYABLE` over a body warning that 20% of orders cannot be placed — belongs with the PDR's own
+  success-criterion review.
+- **Observability**, carried from cycle 01 for the second time: no retry-rate metric, the 429
+  deviation unrecorded, and a 60-second budget that is per call where one invocation makes several.
+- **The phase-2 date** on the commission criterion, owed by the decider since PDR-0003 moved it
+  "with a later date" and named none. Recorded in the charter's open questions.
+- **`.claude/` project settings and hooks**, untracked and deliberately not gitignored. They are
+  masked as character devices inside the agent's sandbox, so no agent can read them or commit what
+  it has not read. A human has to add them.
+
+## Where the next framing starts
+
+**With the copying module, and with the honest reading above rather than with this backlog.**
+
+It is `critical`: it holds a key and moves a member's money. Two things are not negotiable there
+and they are tests, not process — the agent key can place orders and nothing else, and revocation
+works. Two commitments from `pilot-faq.md` must be framed *with* the module rather than around it:
+the notice shown **before** a member acts, and revocation as a first-class path.
+
+And D1 belongs on day one again, for the third time, because the alternative is to build a
+`critical` module for a demand nobody has observed. Cycle 01 was told this. Cycle 02 was told this
+and chose otherwise, with the reason recorded. If cycle 03 defers it again, that is the project's
+answer about what it is really doing, and it should be written down as plainly as this.

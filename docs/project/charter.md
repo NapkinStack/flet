@@ -34,20 +34,44 @@ Karim's 500-member server is the first one, not the product.
 
 ## Success criteria
 
-**1. Twenty members still copying at day 30, on 2026-12-31.** This is the decider's own
-stopping rule, and it tests the one claim two independent challenges failed to refute: that a
-member copies because someone they know vouched, not because a ranking said so. It is observed
-from the members' public addresses on the venue.
+**Revised on 2026-09-22 by [PDR-0003](../pdr/0003-prove-the-machine-on-a-few-before-opening-the-tap.md)**,
+which replaced a count with evidence of quality and moved the commission criterion behind a
+gate. This section states what that decision says; where the two disagree, the PDR wins. It is
+written out here because the PDR was merged with this section left as it was, and the open
+questions below claimed a revision the criteria above did not carry.
 
-**Recorded honestly, because it is written in the discovery and must not be lost here:** this
-criterion decides **interest, not viability**. Twenty copiers produce between 41 € and 671 € a
-month at the measured turnover. The decider chose it deliberately over a revenue condition:
-the first proof sought is use.
+**Phase 1 — a closed pilot, 5 to 8 members and 2 to 3 traders, before 2026-12-31.** Five
+criteria, every one observed rather than asserted:
 
-**2. More than 500 € of commission in a calendar month, before 2027-03-21.** *(framer, to
-confirm — it is the restatement proposed for PDR-0001, whose current criterion is unreachable
-at the measured turnover.)* This is the one that tests viability. It needs roughly 98,000 € of
-member capital under copy. Observed from the builder fee credited on-chain.
+1. **Zero unchosen divergence** between the member's position and the vouched trader's: the copy
+   is faithful, or it refuses and says so. It is the product's whole promise — if it drifts
+   silently, nothing else counts.
+2. **Zero key incident.** The agent key can place orders and nothing else, throughout. A decider
+   no-go, verified rather than asserted.
+3. **Every member revokes at least once, deliberately, and it works.** An exit that has never
+   been used is not an exit.
+4. **At least 60% of members choose to continue past day 14.** The only desire signal a pilot can
+   honestly produce.
+5. **`screening`'s predictions confronted with reality** — fees actually incurred, share of
+   orders refused, slippage between the trader's fill and the member's. The most valuable of the
+   five, and only a small pilot produces it: it makes falsifiable everything that module has been
+   asserting.
+
+**Why the count went.** The earlier criterion — twenty members still copying at day 30 — was not
+excused, it was arithmetically out of reach at pilot size: this project's own binomial model
+showed five invitations returning *refuted* **47% of the time while the product was exactly as
+good as forecast**. A criterion that fires on noise is worse than none, because it will be
+believed. PDR-0003 carries the model.
+
+**Phase 2 — the acquisition funnel, gated on two conditions**, not one: the written legal opinion
+received *and acted on*, **and** every phase-1 criterion met. The funnel may be built meanwhile —
+a landing page and a waiting list cost nothing and expose nothing. The tap does not open.
+
+**The commission criterion lives there now**: more than 500 € in a calendar month, testing
+viability, needing roughly 98,000 € of member capital under copy, observed from the builder fee
+credited on-chain. **Its date is owed by the decider** — PDR-0003 moved it to phase 2 "with a
+later date" and named none, so the old *before 2027-03-21* is not restated here as though it had
+survived. See the open questions.
 
 ## Constraints
 
@@ -172,6 +196,10 @@ The pilot size is a **launch** parameter. It gates no deliverable and no module.
 
 **Previously blocking, answered when this charter was accepted:** the **criticality**
 (`critical`) and **success criterion 2** (the 500 € restatement proposed for PDR-0001).
+
+**Owed by the decider, since 2026-09-22:** the **date** on the phase-2 commission criterion.
+PDR-0003 moved it there "with a later date" and named none. Until it has one, the project has a
+viability criterion with no deadline, which is a criterion that cannot fail.
 
 **Not blocking:**
 
