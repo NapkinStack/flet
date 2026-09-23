@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from enum import StrEnum
 
 #: The venue refuses any order below this notional. Not ours to change (AGENTS.md).
 MINIMUM_ORDER_USDC = Decimal(10)
@@ -20,6 +21,22 @@ VENUE_TAKER_FEE_RATE = Decimal("0.00045")
 
 #: Share of a trader's orders a member should be able to place for the answer to be "yes".
 COVERAGE_TARGET = Decimal("0.80")
+
+#: More than this share of fills posted rather than taken and a copier arriving afterwards
+#: reproduces less than half of what they are copying (PDR-0002).
+UNREPRODUCIBLE_ALERT = Decimal("0.5")
+
+#: Volume landing on this share of the window's days or fewer is a burst, not a month
+#: (PDR-0002).
+CONCENTRATION_ALERT = Decimal(1) / Decimal(3)
+
+#: A cut-short window is extrapolated to a month by this factor before the answer says so.
+EXTRAPOLATION_ALERT = Decimal(3)
+
+#: And past this factor it stops being an answer. Live, a read of 2.4 hours was extrapolated
+#: by 319 — a number with the shape of a measurement and the content of a guess (PDR-0002,
+#: amended 2026-09-21).
+EXTRAPOLATION_CEILING = Decimal(30)
 
 #: Above this monthly cost, the fee burden is called out rather than merely stated.
 FEE_BURDEN_ALERT = Decimal("0.05")
@@ -42,12 +59,26 @@ class Fill:
         return self.price * self.size
 
 
+class Ruling(StrEnum):
+    """What the answer says on its first line. `NO VERDICT` is not here: it is the absence of
+    a verdict, raised rather than returned (PDR-0002)."""
+
+    COPYABLE = "COPYABLE"
+    WITH_RESERVATIONS = "COPYABLE WITH RESERVATIONS"
+    NOT_COPYABLE = "NOT COPYABLE"
+
+
 @dataclass(frozen=True)
 class Verdict:
     """The answer, with every figure it rests on. A verdict without its measurement is not
     an answer here (AGENTS.md)."""
 
-    copyable: bool
+    ruling: Ruling
+    reservations: tuple[str, ...]
+    """Named in the headline, in the order fees, reproducibility, concentration,
+    extrapolation. Empty when the ruling is `COPYABLE`; still printed in full below when the
+    ruling is `NOT_COPYABLE`, so an administrator learns why a trader is unsuitable twice
+    over."""
     ticket: Decimal
     trader_account: Decimal
     fills_read: int
@@ -73,6 +104,12 @@ class Verdict:
     """False when the venue's page cap stopped the read short of the window asked for, so the
     monthly figures above are extrapolated from less than that window."""
     reasons: tuple[str, ...]
+
+    @property
+    def copyable(self) -> bool:
+        """Clears the venue's floor at this ticket. Reservations never make it false — a
+        reservation is expensive, not impossible."""
+        return self.ruling is not Ruling.NOT_COPYABLE
 
 
 @dataclass(frozen=True)

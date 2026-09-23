@@ -10,11 +10,16 @@ from decimal import Decimal
 
 from screening.model import (
     BUILDER_FEE_RATE,
+    CONCENTRATION_ALERT,
     COVERAGE_TARGET,
+    EXTRAPOLATION_ALERT,
+    EXTRAPOLATION_CEILING,
     FEE_BURDEN_ALERT,
     MINIMUM_ORDER_USDC,
+    UNREPRODUCIBLE_ALERT,
     VENUE_TAKER_FEE_RATE,
     Fill,
+    Ruling,
     Verdict,
 )
 
@@ -29,6 +34,7 @@ def assess(
     *,
     window_days: Decimal | None = None,
     window_complete: bool = True,
+    window_asked_days: Decimal | None = None,
 ) -> Verdict:
     """Can a member holding `ticket` copy this trader, and at what cost?
 
@@ -43,10 +49,16 @@ def assess(
     """
     if not fills:
         raise ValueError("no fills: a verdict cannot be given without the trader's executions")
-    if trader_account <= 0:
-        raise ValueError("the trader's account value must be positive")
-    if ticket <= 0:
-        raise ValueError("the member's ticket must be positive")
+    # Finiteness is checked before any comparison, because `Decimal("NaN") <= 0` does not
+    # answer False, it raises — and the venue's own numbers reach here unfiltered. A verifier
+    # drove `accountValue: "NaN"` and a `px: "0"` fill through the command and both escaped as
+    # uncaught exceptions, which the process reports as exit 1: COPYABLE WITH RESERVATIONS.
+    if not trader_account.is_finite() or trader_account <= 0:
+        raise ValueError("the trader's account value must be a positive number")
+    if not ticket.is_finite() or ticket <= 0:
+        raise ValueError("the member's ticket must be a positive number")
+    if any(not f.notional.is_finite() for f in fills):
+        raise ValueError("the venue returned a fill whose notional is not a number")
 
     span = (Decimal(max(f.time_ms for f in fills) - min(f.time_ms for f in fills))) / _MS_PER_DAY
     days = window_days if window_days is not None else span
@@ -55,8 +67,12 @@ def assess(
 
     count = Decimal(len(fills))
     buckets = {f.time_ms // int(_MS_PER_DAY) for f in fills}
+    # UTC day buckets, so a window exactly `window_days` long can straddle one bucket more
+    # than it has days — which printed `traded on 31 of the 30 days read` to an administrator.
+    # S10 pinned this on the path where the window is inferred; this is the other path.
     days_traded = len(buckets)
     calendar_days = int(window_days) if window_days is not None else max(buckets) - min(buckets) + 1
+    days_traded = min(days_traded, calendar_days)
     scale = ticket / trader_account
     notionals = sorted(f.notional for f in fills)
 
@@ -72,12 +88,54 @@ def assess(
     # The ticket that clears the floor on COVERAGE_TARGET of the orders: the smallest
     # (1 - COVERAGE_TARGET) may be refused.
     cutoff = notionals[int((Decimal(1) - COVERAGE_TARGET) * count)]
+    if cutoff <= 0:
+        # One zero-notional fill in the bottom fifth is enough, and it needs no exotic input.
+        raise ValueError(
+            "a fill of zero notional sits inside the coverage target: no minimum ticket can "
+            "be computed from it"
+        )
     minimum_ticket = MINIMUM_ORDER_USDC / (cutoff / trader_account)
 
     copyable = refused_share <= Decimal(1) - COVERAGE_TARGET
 
+    # A cut-short window is stretched to a month. Past a point that stops being a
+    # measurement: live, a read of 2.4 hours was extrapolated by 319 while seventeen of
+    # twenty reads went unused (PDR-0002, amended 2026-09-21).
+    #
+    # This is checked BEFORE any verdict is formed, and outranks all three of them. An
+    # earlier version of this branch let the floor win, on the reasoning that whether orders
+    # clear 10 USDC is read straight off the notionals. That reasoning was wrong: the
+    # notionals read are the ones in the window we actually got, so `refused_share` and
+    # `minimum_ticket` are inferences from half an hour printed as facts about a trader —
+    # the exact move the amendment forbids. It also showed administrators monthly figures
+    # stretched by 823x and 2158x, which the amendment's own success criterion says must
+    # never happen. `NO VERDICT` is the most severe outcome and it is reached first.
+    asked = window_asked_days if window_asked_days is not None else days
+    stretch = (asked / span) if (not window_complete and span > 0) else Decimal(1)
+    if stretch > EXTRAPOLATION_CEILING:
+        raise ValueError(
+            f"the venue returned {span:.2f} days of a {asked:.0f}-day window: a month "
+            f"inferred from that is stretched more than {EXTRAPOLATION_CEILING:.0f} times, "
+            "which is a guess, not a figure"
+        )
+
+    reservations = _reservations(
+        monthly_fee_burden=monthly_fee_burden,
+        unreproducible_share=unreproducible_share,
+        days_traded=days_traded,
+        calendar_days=calendar_days,
+        stretch=stretch,
+    )
+    if not copyable:
+        ruling = Ruling.NOT_COPYABLE
+    elif reservations:
+        ruling = Ruling.WITH_RESERVATIONS
+    else:
+        ruling = Ruling.COPYABLE
+
     return Verdict(
-        copyable=copyable,
+        ruling=ruling,
+        reservations=reservations,
         ticket=ticket,
         trader_account=trader_account,
         fills_read=len(fills),
@@ -104,6 +162,29 @@ def assess(
             window_complete=window_complete,
         ),
     )
+
+
+def _reservations(
+    *,
+    monthly_fee_burden: Decimal,
+    unreproducible_share: Decimal,
+    days_traded: int,
+    calendar_days: int,
+    stretch: Decimal,
+) -> tuple[str, ...]:
+    """The reservations that apply, in the order the PDR fixes: fees, reproducibility,
+    concentration, extrapolation. Each is a specific test with a stated threshold — a vague
+    caution would be read as noise, and the middle verdict is going to be common."""
+    named: list[str] = []
+    if monthly_fee_burden > FEE_BURDEN_ALERT:
+        named.append("fees")
+    if unreproducible_share > UNREPRODUCIBLE_ALERT:
+        named.append("reproducibility")
+    if Decimal(days_traded) / Decimal(calendar_days) <= CONCENTRATION_ALERT:
+        named.append("concentration")
+    if stretch > EXTRAPOLATION_ALERT:
+        named.append("extrapolation")
+    return tuple(named)
 
 
 def _reasons(
@@ -169,7 +250,9 @@ def _reasons(
             f"{_DAYS_PER_MONTH / days:.1f}"
         )
 
-    if unreproducible_share > 0:
+    # Rounded, not raw: a share of 0.4% printed `0% of the fills were posted rather than
+    # taken: a copier cannot reproduce them`, which warns about nothing and reads as a bug.
+    if round(unreproducible_share * 100) > 0:
         said.append(
             f"{unreproducible_share:.0%} of the fills were posted rather than taken: a copier "
             f"arriving afterwards cannot reproduce them"

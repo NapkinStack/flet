@@ -25,4 +25,4 @@ The PDR describes **what the product must do and why**, never its implementation
 | No. | Title | Status | Criterion to check on |
 |---|---|---|---|
 | [0001](./0001-charge-on-routed-volume-never-on-the-member-s-gains.md) | Charge a flat commission on routed volume, never a share of the member's gains | Accepted | 2027-03-21 |
-| [0002](./0002-three-verdicts-not-two.md) | Three verdicts, not two: copyable, copyable with reservations, not copyable | Proposed | 2026-12-31 |
+| [0002](./0002-three-verdicts-not-two.md) | Three verdicts, not two: copyable, copyable with reservations, not copyable | Accepted | 2026-12-31 |
