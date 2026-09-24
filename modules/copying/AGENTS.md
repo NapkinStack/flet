@@ -57,4 +57,9 @@ ADR-0001's. Changing any of them is a new ADR.
 
 ## Non-standard commands
 
-None yet. `commands.check` and `commands.test` are declared with the first file of code.
+- **Venue tests** (`tests/test_venue.py`, marker `venue`) reach the venue's testnet and need
+  `FLET_TESTNET_MAIN_KEY` in the environment and `api.hyperliquid-testnet.xyz` allowed out.
+  Without the key they are skipped — `nstack test copying` then reports them as `s`, which is
+  *not run*. D2 is not accepted on a run where they were skipped.
+- The command reads `FLET_KEY_DIR` and `FLET_KEY_SECRET` (a Fernet key:
+  `uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`).
