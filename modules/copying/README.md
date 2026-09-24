@@ -16,7 +16,13 @@ nstack test copying         # never starts another module
 nstack run copying          # locally, with doubles for the dependencies
 ```
 
-Commands: the `commands` section of the MANIFEST, to declare for this module's stack.
+Commands: the `commands` section of the MANIFEST.
+
+```bash
+uv run copying authorise <member main address> [--testnet]   # a fresh agent, to approve on the venue
+uv run copying status    <member main address> [--testnet]   # alive, per the venue — or no answer
+uv run copying forget    <member main address>               # flet drops its copy; not a revocation
+```
 
 ## Contracts
 
