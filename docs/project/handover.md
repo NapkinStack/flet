@@ -24,28 +24,38 @@ closure of cycle 02 says it at more length.
 
 | | |
 |---|---|
-| `main` | `8277dca` — D2 (#20), ADR-0002 (#22), the pilot FAQ and declared demand (#23), PDR-0003 and the revised criterion (#24), ADR-0003 and this file (#25), D3 (#26) |
-| In flight | **nothing.** No open pull request, no branch awaiting a sheet |
+| `main` | D3 (#26), cycle 02's closure and the charter correction (#27), cycle 03's framing (#28), NapkinStack v0.6.1 (#29) |
+| **Cycle 03** | **accepted, running 2026-09-24 to 2026-10-15.** D1 a spike, D2 and D3 on `copying` |
 | `screening` | 81 tests, `nstack check` 0, `nstack fitness` compliant, verified on `main` |
+| `copying` | **does not exist yet.** It is created by the first task below |
+| Framework | v0.6.1, project and CLI in step |
 
-Older branches are merged or superseded and can be ignored. `nstack doctor` reports compliant.
+Older branches are merged or superseded and can be ignored. `nstack fitness` is compliant and
+`nstack doctor` reports **0 gaps**; its 13 `NOT VERIFIED` lines are the GitHub settings, which need
+a token to read — *what cannot be read is never reported as guarded*. `doctor` exits non-zero in
+that state, so read the gap count, not the exit code.
 
 ## Next, in order
 
-1. **Frame cycle 03 around the `copying` module** — the closure of cycle 02 says where the framing
-   starts. It is `critical`. Two things are not negotiable and they are tests, not process: the
-   agent key can place orders and nothing else, and revocation works. Two commitments from
-   `pilot-faq.md` are framed *with* the module, not around it: the notice shown **before** a member
-   acts, and revocation as a first-class path. Framing is `playbooks/framing.md`, with the decider;
-   a cycle is `proposed` until the decider accepts it in its own pull request.
-2. **D1 on day one, for the third time.** Five private messages and a fourteen-day clock. It has
-   been deferred by two cycles, it gates every phase-1 criterion in the charter, and the
-   alternative is building a `critical` module for a demand nobody has observed.
-3. **Upgrade NapkinStack at this cycle boundary, before cycle 03 is accepted.** 0.6.1 exists; the
-   project is recorded at 0.6.0. Sequence, and only in this order: `uv tool install napkinstack
-   --force`, then `nstack update` (it makes the branch `nstack/update-vX.Y.Z`), then `nstack
-   doctor`. Upgrading the CLI without `nstack update` turns doctor's L1 red. **The framework moved
-   0.3.0 to 0.6.1 in three days: re-check at every boundary rather than when someone remembers.**
+1. **D1, and it is day one.** Five private messages, sent within three days, read at day 14.
+   Deferred by two cycles, in the cycle for the third time, and it gates every phase-1 criterion in
+   the charter. **The framer's note says to look on day three, not at the end:** if the messages
+   have not gone out by 2026-09-27, this cycle is already repeating both of its predecessors.
+2. **Scaffold the module:** `nstack new-module copying NapkinStack/maintainers critical`, declared
+   `user_facing` — a member sees what it does. Its own pull request, as `screening` had.
+3. **D2, then D3**, sequentially: both are `copying`, and it is one pull request per module. D2 is
+   the key a member gives and takes back; D3 is the notice shown before they act. Read the cycle
+   for what the criteria are built to refuse — every one of them names **the venue** as the thing
+   that answers, never our own state.
+4. **`critical` means adversarial verification without a cap** (ADR-0003), unlike `screening`'s one
+   round. Hold that line when it is inconvenient; the reason is in *What this project has learned
+   about itself* below.
+
+**Owed at the next boundary, not before:** check NapkinStack again. It moved 0.3.0 to 0.6.1 in
+three days. Sequence, and only in this order: `uv tool install "napkinstack==X.Y.Z"
+--with-executables-from pre-commit`, then `nstack update`, then `nstack doctor`. Upgrading the CLI
+without `nstack update` turns doctor's L1 red. **And `nstack update` branches from the current HEAD
+without saying so** — check out `main` first, or expect to replant the branch, as #29 had to.
 
 ## Decisions taken, and where they live
 

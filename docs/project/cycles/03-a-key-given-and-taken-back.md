@@ -1,6 +1,6 @@
 ---
 goal: "Find out whether anyone wants this, and make the key a member hands flet safe to give and safe to take back"
-status: proposed
+status: accepted
 appetite_weeks: 3
 start: 2026-09-24
 end: 2026-10-15
