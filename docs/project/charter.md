@@ -8,7 +8,7 @@ success_criteria:
 
 # Charter — flet
 
-> Written once, at the first framing (`playbooks/framing.md`). Changed only through a PDR.
+> Written once, at the first framing (`.nstack/playbooks/framing.md`). Changed only through a PDR.
 > Every agent session reads it.
 >
 > It reuses `docs/project/discovery.md`, decided **go** on 2026-09-21 after three rounds and

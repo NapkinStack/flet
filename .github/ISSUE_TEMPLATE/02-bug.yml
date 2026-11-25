@@ -22,6 +22,15 @@ body:
     validations: { required: true }
 
   - type: input
+    id: brought
+    attributes:
+      label: Pull request that brought it
+      description: >-
+        The number of the merged pull request the defect came in with, or "unknown" —
+        what escaped is measured on it (.nstack/handbook/10-measurement.md).
+    validations: { required: true }
+
+  - type: input
     id: impact
     attributes:
       label: Impact
@@ -31,7 +40,7 @@ body:
   - type: checkboxes
     id: guardrail
     attributes:
-      label: Feedback loop (docs/os/10-measurement.md §4)
+      label: Feedback loop (.nstack/handbook/10-measurement.md §4)
       description: Fixing the bug is not enough — improve the system that let it through.
       options:
         - label: A test reproducing the bug will be added (it must fail BEFORE the fix)

@@ -128,7 +128,7 @@ an enforced rule with a stated one.
 
 Option 3 was the honest runner-up and remains the fallback. It was set aside because a
 guardrail that depends on somebody reading a report is the kind of goodwill
-`docs/os/07-governance.md` exists to remove.
+`.nstack/handbook/07-governance.md` exists to remove.
 
 The contradiction with the kernel's "never with a human's credentials" was raised before the
 token was used for anything, and settled by the decider — reported, not resolved in silence,

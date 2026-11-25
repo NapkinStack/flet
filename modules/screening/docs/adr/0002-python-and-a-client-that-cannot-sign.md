@@ -27,7 +27,7 @@ What does this module run on, and what does it use to reach the venue?
 
 ## Constraints
 
-- The project's toolchain is already **uv**, declared in `docs/tooling-profile.md` as the
+- The project's toolchain is already **uv**, declared in `.nstack/tooling-profile.md` as the
   foundation's way of running commands and tests. A second package manager would be a second
   thing to install on the Hetzner box and in CI.
 - `nstack` itself requires Python ≥ 3.12, so a Python runtime is present wherever this project

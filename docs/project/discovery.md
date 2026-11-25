@@ -9,7 +9,7 @@ round: 3
 
 # Discovery
 
-> Started by the engine's `discover` command, run by your agent (`playbooks/discovery.md`).
+> Started by the engine's `discover` command, run by your agent (`.nstack/playbooks/discovery.md`).
 > One document, a decision at the end of each round.
 
 ## 1. Intake
@@ -45,7 +45,7 @@ the platform takes its commission. A later one may let members vote on the list.
 
 ## 2. Research
 
-> `docs/tooling-profile.md` has no tool in the "Reliable documentary research" row, so this
+> `.nstack/tooling-profile.md` has no tool in the "Reliable documentary research" row, so this
 > round used the tools at hand: the agent's web search and page fetch. Marked below:
 > *primary* — read on the source's own site; *reported* — a figure a company states about
 > itself; *excerpt* — seen only in a search result, the primary source not read.
@@ -419,7 +419,7 @@ to 4 · 2026-09-20
 > Nothing in this section has been edited since it was written.
 
 > Section 1 is confirmed (line 17), so this challenge is against the document as written.
-> `docs/tooling-profile.md` declares no research tool, so — as in stage 2 — this round used
+> `.nstack/tooling-profile.md` declares no research tool, so — as in stage 2 — this round used
 > the tools at hand: the agent's web search and page fetch, named at each finding. Same
 > marking: *primary* — read on the source's own site; *reported* — a figure a company
 > states about itself; *excerpt* — seen only in a search result; *assumption* — unsourced.
@@ -672,7 +672,7 @@ session did not write any of the round-2 material and had no access to the sessi
 > Inserting this subsection shifts every line of the round-2 entries that follow it; resolve a
 > citation against that commit, not against the current file. Nothing above is edited.
 >
-> **Tools.** `docs/tooling-profile.md` still declares no research tool, so this round used the
+> **Tools.** `.nstack/tooling-profile.md` still declares no research tool, so this round used the
 > tools at hand, named at each finding: the agent's web search and page fetch, and — for the
 > numbers — direct HTTP reads of `stats-data.hyperliquid.xyz`, `api.hyperliquid.xyz` and
 > `api.llama.fi` from this sandbox, all read-only, no keys, no orders, no money.
