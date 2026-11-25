@@ -60,6 +60,14 @@ def _say(reason: str) -> None:
     stream = sys.stderr
     if stream is None:
         return
+    # Guard against a non-string reason (defensive: type hints promise str, callers always
+    # pass f-strings, but a None or unprintable value would otherwise escape as a traceback
+    # that reads as a verdict). An empty reason is also silent: an administrator who sees no
+    # reason and no verdict knows something went wrong, but not what — yet a blank line on
+    # stderr is noise that can be mistaken for a missing newline on stdout.
+    text = str(reason) if reason is not None else ""
+    if not text:
+        return
     # A broken or closed stderr. There is nowhere left to say it, and stdout is not a
     # fallback: silence, and the exit code carries the answer on its own.
     #
@@ -68,7 +76,7 @@ def _say(reason: str) -> None:
     # no route to that through a shell, and one character closes it. `KeyboardInterrupt` and
     # `SystemExit` are `BaseException` and still leave.
     with contextlib.suppress(Exception):
-        print(reason, file=stream)
+        print(text, file=stream)
 
 
 def _date(ms: int) -> str:
