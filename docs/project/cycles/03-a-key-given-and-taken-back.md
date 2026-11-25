@@ -1,6 +1,8 @@
 ---
 goal: "Find out whether anyone wants this, and make the key a member hands flet safe to give and safe to take back"
-status: accepted
+status: closed
+outcome: shipped
+ended_on: 2026-11-25
 appetite_weeks: 3
 start: 2026-09-24
 end: 2026-10-15
@@ -136,4 +138,24 @@ worth a look on day three rather than at the end.
 
 ## Closure
 
-<Written at the end of the cycle.>
+**Closed on 2026-11-25 by the circuit breaker, 41 days after the end date of 2026-10-15.** The
+decider chose *ship what is delivered or accepted*: `status: closed`, `outcome: shipped`.
+
+**Delivered or accepted: nothing.** `nstack deliver --write-states` found no record to write, and
+`nstack plan` shows 0 of 3 deliverables accepted, none held. D1, D2 and D3 keep the state the
+file had, `ready`; none of them is delivered, and none is deferred or dropped. Shipping closes
+the cycle on what exists, and this cycle shipped no deliverable.
+
+**Not delivered:** D1 (the five private invitations), D2 (the key that places orders and nothing
+else, and its revocation), D3 (the notice before the authorisation). The `copying` module and
+its `critical` code were not built in this cycle.
+
+**Success criteria moved:** none recorded; the decider has not said any moved.
+
+**Decisions due at this closure:** none named by `nstack plan`.
+
+**Left to the decider, not written here:** whether D1, D2 and D3 are carried into a later cycle,
+deferred or dropped; whether D1's question (does anyone want this) is still the project's.
+
+**Documents brought current:** none, since nothing a reader sees has changed.
+
