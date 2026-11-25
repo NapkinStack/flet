@@ -311,7 +311,7 @@ The module's `README.md` had already restated the criterion this way, as
 `*(nothing on stdout)*` | **3**. The verifier's finding was not about the behaviour, which it
 had confirmed on twelve separate shapes of unreadable input: it was that **an expected result
 had been changed in a README, by the author, without the decider agreeing to it visibly**
-(`playbooks/verification.md`). The reading was right and the route was wrong, so the decision
+(`.nstack/playbooks/verification.md`). The reading was right and the route was wrong, so the decision
 is recorded where decisions live, and the README now follows the PDR rather than amending it.
 
 ### What it does not change

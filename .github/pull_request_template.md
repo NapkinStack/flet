@@ -12,7 +12,7 @@ Closes #
 - [ ] ⚠️ Cross-module — the `cross-module` label is required, justification below
 
 <Justification when cross-module. Reminder: a contract change goes through an
-expand/contract sequence, not a single PR (`docs/os/03-contracts.md`).>
+expand/contract sequence, not a single PR (`.nstack/handbook/03-contracts.md`).>
 
 ## Deliverable
 
@@ -22,16 +22,18 @@ Deliverable: D<n>
 > outside the cycle — an incident, a production defect — carries the `out-of-cycle` label,
 > and replaces the line above with `Out of cycle: <reason>`. A pull request that changes no
 > module beyond its description — manifest, `AGENTS.md`, `README.md`, `docs/` — such as a
-> framework update, is not delivery work: the line does not apply.
+> framework update, is not delivery work: the line does not apply, unless the manifest moves
+> the module's criticality or its user-visible surface.
 
 ## What it changes
 
 <The behaviour, not the list of files. The diff already says what changed; this section
-says why.>
+says why. A change with a shape — a flow, who reads what, a before and an after — is drawn:
+one Mermaid diagram with its legend, in place of the prose it shows; a change of words is not.>
 
 ## Oracle
 
-> `docs/os/05-workflow.md` §3
+> `.nstack/handbook/05-workflow.md` §3
 
 - [ ] The success criterion was written **before** the implementation
 - [ ] It was seen **failing**, for the right reason
@@ -44,7 +46,7 @@ other: <specify>
 
 ## Review budget
 
-> `docs/os/05-workflow.md` §4
+> `.nstack/handbook/05-workflow.md` §4
 
 - Lines changed (excluding generated): <n>
 - Files touched: <n>
@@ -59,7 +61,8 @@ other: <specify>
 - [ ] No contract affected
 - [ ] Contract consumed — the version is declared in the manifest
 - [ ] Contract changed, **additive** — contract tests green, and `nstack compat` proving it
-      once the version is consumed or stable
+      once the version is consumed or stable; a promise of its page reversed: <which, or none>
+      — no consumer relies on it, or the change is breaking
 - [ ] Contract changed, **breaking** — expand/contract step no. <1|2|3|4>, ADR linked,
   removal date set
 
@@ -68,20 +71,20 @@ other: <specify>
 ## Definition of Done
 
 > Tick what is **applicable** for the module's criticality
-> (`docs/os/05-workflow.md` §7). Never tick a box without having actually run it.
+> (`.nstack/handbook/05-workflow.md` §7). Never tick a box without having actually run it.
 
 - [ ] Oracle green
 - [ ] Lint, format, types
 - [ ] Unit tests
 - [ ] Build
-- [ ] Contract tests *(when there is a contract)*
+- [ ] Contract tests
 - [ ] Fitness functions
-- [ ] Integration tests *(per risk)*
+- [ ] Integration tests
 - [ ] Security analysis
-- [ ] Accessibility *(when there is UI)*
-- [ ] E2E on critical journeys *(criticality high and above)*
-- [ ] Observability added *(criticality high and above)*
-- [ ] Rollback verified *(criticality critical)*
+- [ ] Accessibility
+- [ ] E2E on critical journeys
+- [ ] Observability added
+- [ ] Rollback verified
 - [ ] Affected documentation updated
 - [ ] Diff self-reviewed line by line
 
@@ -89,25 +92,36 @@ other: <specify>
 
 ## Test sheet
 
-> Required when the pull request changes a user-facing module, or one of criticality high
-> or critical, beyond its description — manifest, `AGENTS.md`, `README.md`, `docs/`
-> (`docs/os/05-workflow.md` §7). The scenarios come from the acceptance
+> Required when the pull request changes a module the table of `.nstack/handbook/05-workflow.md` §7
+> asks a sheet of — a user-facing one from `standard` up, any one of criticality high or
+> critical — beyond its description: manifest, `AGENTS.md`, `README.md`, `docs/` — or moves its
+> criticality or its user-visible surface. The
+> scenarios come from the acceptance
 > criteria and are written before the code; the results are filled in by a verifier who is
-> not the author (`playbooks/verification.md`). Kind: automated · explored · human only —
+> not the author (`.nstack/playbooks/verification.md`). Kind: automated · explored · human only —
 > reason. Result: passed · failed — what was observed · not verified.
+>
+> **Confirmed** is for a fix landed after the verification: an *automated* scenario is simply run
+> again at the head and its **Commit** cell takes the head — nothing here; one *explored* by hand
+> keeps its commit and gets the head commit here with what moved since, after a `;` when an earlier confirmation is there — except at criticality `critical`, where every scenario is run again. Leave
+> it empty when nothing moved — a confirmation is not a round.
 
-Verifier: <@handle, or session and the agent session's identifier>
+Verifier: <@handle, or session and the agent session's identifier> — <on approval agent: what it is expert in, for this module>
 
-| # | Given · when · then | Kind | Result | Evidence | Commit |
-|---|---|---|---|---|---|
-| S1 | <Given …, when …, then …> | <automated · explored · human only — reason> | <passed · failed · not verified> | <link> | <commit> |
+| # | Given · when · then | Kind | Result | Evidence | Commit | Confirmed |
+|---|---|---|---|---|---|---|
+| S1 | <Given …, when …, then …> | <automated · explored · human only — reason> | <passed · failed · not verified> | <link> | <commit> | — |
+
+> A scenario that waits on a person is asked in an acceptance issue; its Evidence cell links the answer.
+
+Verifier's remarks: <what the verifier adds — a scenario that claims more than was exercised, a result obtained another way than the evidence cited; or "none">
 
 ---
 
 ## Summary
 
 > An imposed format. The last three sections are the most important and the most often
-> skated over. (`docs/os/05-workflow.md` §8)
+> skated over. (`.nstack/handbook/05-workflow.md` §8)
 
 **DONE**
 <one sentence per change>
@@ -129,8 +143,8 @@ Verifier: <@handle, or session and the agent session's identifier>
 ## Signals to report
 
 - [ ] I had to look at another module's implementation → **a signal of a bad boundary**
-  (`docs/os/02-modules.md` §9)
+  (`.nstack/handbook/02-modules.md` §9)
 - [ ] A kernel or playbook rule got in my way for no good reason
 - [ ] A quality gate blocked without improving quality
 - [ ] A rule applied by hand would be worth automating
-  → the automation backlog (`docs/os/07-governance.md` §9)
+  → the automation backlog (`.nstack/handbook/07-governance.md` §9)

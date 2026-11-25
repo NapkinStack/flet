@@ -23,7 +23,7 @@ boundary, the rejected alternatives).
 ## Before splitting
 
 A module represents a **coherent capability**, not a table or a handful of endpoints. See
-the decision tree in `docs/os/02-modules.md` §3.
+the decision tree in `.nstack/handbook/02-modules.md` §3.
 
 Do not split if: the capability is not coherent, the module cannot be tested on its own,
 no owner is identifiable, or its rate of change is the same as the rest with no other

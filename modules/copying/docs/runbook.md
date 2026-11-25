@@ -1,6 +1,6 @@
 # Runbook - copying
 
-> Required for criticality=critical (docs/os/08-quality.md §7).
+> Required for criticality=critical (.nstack/handbook/08-quality.md §7).
 > An empty runbook fails CI. Fill it in before going to production.
 
 ## Alerts and responses
